@@ -18,8 +18,8 @@ export default function Auth() {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
         navigate("/dashboard");
       }
     };
@@ -33,13 +33,33 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
-        navigate("/dashboard");
+        
+        if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+            throw new Error("Invalid email or password. Please try again.");
+          }
+          throw error;
+        }
+
+        if (data.session) {
+          navigate("/dashboard");
+        }
       } else {
+        // Check if user exists before signup
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (existingUser) {
+          throw new Error("An account with this email already exists. Please sign in instead.");
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -49,17 +69,22 @@ export default function Auth() {
             },
           },
         });
+        
         if (error) throw error;
+
         toast({
           title: "Success!",
-          description: "Please check your email for verification.",
+          description: "Account created successfully. Please check your email for verification.",
         });
+        
+        // Switch to login view after successful signup
+        setIsLogin(true);
       }
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
       });
     } finally {
       setLoading(false);
