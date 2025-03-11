@@ -115,6 +115,7 @@ export function KnowledgeBaseManager() {
 
       // If there's a file URL, delete the file from storage
       if (data?.file_url) {
+        // Extract the file path from the URL instead of using storageUrl
         const filePath = data.file_url.split('/').pop();
         if (filePath) {
           const { error: storageError } = await supabase.storage

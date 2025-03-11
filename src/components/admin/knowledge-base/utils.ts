@@ -1,6 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 // Generate a unique file path for storage
 export const generateUniqueFilePath = (fileName: string): string => {
@@ -77,6 +76,11 @@ export const uploadFile = async (
   }
 };
 
+// Helper function to construct file URL for display
 export const constructFileUrl = (fileName: string): string => {
-  return `${window.location.origin}/storage/v1/object/public/knowledge_base_files/${fileName}`;
+  if (!fileName) return '';
+  const { data } = supabase.storage
+    .from('knowledge_base_files')
+    .getPublicUrl(fileName);
+  return data.publicUrl;
 };
