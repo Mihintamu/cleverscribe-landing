@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUploader } from "./FileUploader";
-
-import { generateUniqueFilePath, getPublicFileUrl, uploadFile } from "./utils";
+import { FormHeader } from "./FormHeader";
+import { CommonToggle } from "./CommonToggle";
+import { FormSubjectSelector } from "./FormSubjectSelector";
+import { ContentInput } from "./ContentInput";
+import { FormActions } from "./FormActions";
+import { uploadFile } from "./utils";
 
 type Subject = {
   id: string;
@@ -191,61 +190,33 @@ export function KnowledgeBaseForm({
       if (!open) onClose();
     }}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{editItem ? "Edit Knowledge Base Entry" : "Add Knowledge Base Entry"}</DialogTitle>
-        </DialogHeader>
+        <FormHeader isEditing={!!editItem} />
+        
         <div className="space-y-4 py-4">
-          <div className="flex items-center space-x-2">
-            <Input
-              type="checkbox"
-              id="is-common"
-              className="w-4 h-4"
-              checked={isCommon}
-              onChange={(e) => setIsCommon(e.target.checked)}
-            />
-            <Label htmlFor="is-common">Common Knowledge Base</Label>
-          </div>
+          <CommonToggle isCommon={isCommon} setIsCommon={setIsCommon} />
           
-          {!isCommon && (
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Select
-                value={selectedSubject}
-                onValueChange={setSelectedSubject}
-              >
-                <SelectTrigger id="subject">
-                  <SelectValue placeholder="Select a subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <FormSubjectSelector 
+            subjects={subjects} 
+            selectedSubject={selectedSubject} 
+            setSelectedSubject={setSelectedSubject}
+            isCommon={isCommon}
+          />
           
           <FileUploader onContentParsed={handleContentParsed} onFileSelected={handleFileSelected} />
           
-          <div className="space-y-2">
-            <Label htmlFor="content">Content {hasFile || selectedFile ? "(Optional when file is uploaded)" : ""}</Label>
-            <Textarea
-              id="content"
-              placeholder={hasFile || selectedFile ? "Content is optional when a file is uploaded" : "Enter knowledge base content"}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="min-h-32"
-            />
-          </div>
+          <ContentInput 
+            content={content} 
+            setContent={setContent} 
+            hasFile={hasFile || !!selectedFile}
+          />
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={isUploading}>
-            {isUploading ? "Saving..." : (editItem ? "Update" : "Add")}
-          </Button>
-        </DialogFooter>
+        
+        <FormActions 
+          onClose={onClose} 
+          onSubmit={handleSubmit} 
+          isUploading={isUploading}
+          isEditing={!!editItem}
+        />
       </DialogContent>
     </Dialog>
   );
