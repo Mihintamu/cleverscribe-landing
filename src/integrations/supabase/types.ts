@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      generated_content: {
+        Row: {
+          content_type: Database["public"]["Enums"]["content_type"]
+          created_at: string
+          generated_text: string
+          id: string
+          subject: string
+          target_word_count: number
+          updated_at: string
+          user_id: string
+          word_count_option: Database["public"]["Enums"]["word_count_option"]
+        }
+        Insert: {
+          content_type: Database["public"]["Enums"]["content_type"]
+          created_at?: string
+          generated_text: string
+          id?: string
+          subject: string
+          target_word_count: number
+          updated_at?: string
+          user_id: string
+          word_count_option: Database["public"]["Enums"]["word_count_option"]
+        }
+        Update: {
+          content_type?: Database["public"]["Enums"]["content_type"]
+          created_at?: string
+          generated_text?: string
+          id?: string
+          subject?: string
+          target_word_count?: number
+          updated_at?: string
+          user_id?: string
+          word_count_option?: Database["public"]["Enums"]["word_count_option"]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -100,7 +136,18 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      content_type:
+        | "assignments"
+        | "reports"
+        | "research_paper"
+        | "essays"
+        | "thesis"
+        | "presentation"
+        | "case_studies"
+        | "book_review"
+        | "article_reviews"
+        | "term_papers"
+      word_count_option: "short" | "medium" | "long"
     }
     CompositeTypes: {
       [_ in never]: never
