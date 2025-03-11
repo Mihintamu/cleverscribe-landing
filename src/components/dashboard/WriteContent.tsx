@@ -1,26 +1,10 @@
 
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Save, Download } from "lucide-react";
-
-// Word count mapping
-const wordCountMap = {
-  short: 500,
-  medium: 1000,
-  long: 2000
-};
+import { ContentForm } from "./content/ContentForm";
+import { ContentDisplay } from "./content/ContentDisplay";
+import { wordCountMap } from "./content/utils";
 
 export type ContentType = 
   | 'assignments' 
@@ -47,19 +31,6 @@ export function WriteContent({ userId }: WriteContentProps) {
   const [generatedContent, setGeneratedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
-
-  const contentTypes: ContentType[] = [
-    'assignments', 
-    'reports', 
-    'research_paper', 
-    'essays', 
-    'thesis',
-    'presentation', 
-    'case_studies', 
-    'book_review', 
-    'article_reviews', 
-    'term_papers'
-  ];
 
   const handleGenerate = async () => {
     if (!subject) {
@@ -172,111 +143,23 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor i
 
   return (
     <div className="grid gap-8 md:grid-cols-[1fr_1fr]">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="content-type">Content Type</Label>
-              <Select
-                value={contentType}
-                onValueChange={(value) => setContentType(value as ContentType)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select content type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contentTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject/Topic</Label>
-              <Textarea 
-                id="subject"
-                placeholder="Enter the subject or topic for your content"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="min-h-[80px]"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="word-count">Word Count</Label>
-              <Select
-                value={wordCountOption}
-                onValueChange={(value) => setWordCountOption(value as WordCountOption)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select word count" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="short">Short (~500 words)</SelectItem>
-                  <SelectItem value="medium">Medium (~1000 words)</SelectItem>
-                  <SelectItem value="long">Long (~2000 words)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button 
-              className="w-full" 
-              onClick={handleGenerate}
-              disabled={isGenerating || !subject}
-            >
-              {isGenerating ? "Generating..." : "Generate Content"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <Label>Generated Content</Label>
-              {generatedContent && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={downloadAsText}
-                    title="Download as Text"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    TXT
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={downloadAsPDF}
-                    title="Download as PDF"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    PDF
-                  </Button>
-                </div>
-              )}
-            </div>
-            <div className="border rounded-md p-4 min-h-[400px] bg-muted/20">
-              {isGenerating ? (
-                <div className="flex justify-center items-center h-full">
-                  <div className="animate-pulse">Generating content...</div>
-                </div>
-              ) : !generatedContent ? (
-                <div className="text-muted-foreground flex justify-center items-center h-full">
-                  Generated content will appear here...
-                </div>
-              ) : (
-                <div className="whitespace-pre-line">{generatedContent}</div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ContentForm
+        contentType={contentType}
+        setContentType={setContentType}
+        subject={subject}
+        setSubject={setSubject}
+        wordCountOption={wordCountOption}
+        setWordCountOption={setWordCountOption}
+        isGenerating={isGenerating}
+        onGenerate={handleGenerate}
+      />
+      
+      <ContentDisplay
+        generatedContent={generatedContent}
+        isGenerating={isGenerating}
+        onDownloadText={downloadAsText}
+        onDownloadPDF={downloadAsPDF}
+      />
     </div>
   );
 }
