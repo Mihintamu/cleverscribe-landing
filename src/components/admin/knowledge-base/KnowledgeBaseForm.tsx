@@ -45,6 +45,7 @@ export function KnowledgeBaseForm({
   const [content, setContent] = useState("");
   const [isCommon, setIsCommon] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [hasFile, setHasFile] = useState(false);
   const { toast } = useToast();
 
   // Reset form when dialog opens/closes or edit item changes
@@ -52,6 +53,7 @@ export function KnowledgeBaseForm({
     if (isOpen && editItem) {
       setIsCommon(editItem.is_common);
       setContent(editItem.content);
+      setHasFile(!!editItem.file_url);
       if (!editItem.is_common) {
         setSelectedSubject(editItem.subject);
       }
@@ -61,6 +63,7 @@ export function KnowledgeBaseForm({
       setContent("");
       setIsCommon(false);
       setSelectedFile(null);
+      setHasFile(false);
     }
   }, [isOpen, editItem]);
 
@@ -68,24 +71,39 @@ export function KnowledgeBaseForm({
     setContent(parsedContent);
   };
 
+  const handleFileSelected = (file: File | null) => {
+    setSelectedFile(file);
+    setHasFile(!!file);
+  };
+
   const handleSubmit = async () => {
+    // Validation
     if (isCommon) {
-      // For common knowledge, we don't need a subject
-      if (!content.trim()) {
+      // For common knowledge, check if content or file is present
+      if (!content.trim() && !hasFile && !selectedFile) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Content cannot be empty",
+          description: "Please provide either content or upload a file",
         });
         return;
       }
     } else {
-      // For regular knowledge, we need both subject and content
-      if (!selectedSubject || !content.trim()) {
+      // For regular knowledge, check if subject and (content or file) are present
+      if (!selectedSubject) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Please select a subject and enter content",
+          description: "Please select a subject",
+        });
+        return;
+      }
+      
+      if (!content.trim() && !hasFile && !selectedFile) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Please provide either content or upload a file",
         });
         return;
       }
@@ -184,13 +202,13 @@ export function KnowledgeBaseForm({
             </div>
           )}
           
-          <FileUploader onContentParsed={handleContentParsed} />
+          <FileUploader onContentParsed={handleContentParsed} onFileSelected={handleFileSelected} />
           
           <div className="space-y-2">
-            <Label htmlFor="content">Content</Label>
+            <Label htmlFor="content">Content {hasFile || selectedFile ? "(Optional when file is uploaded)" : ""}</Label>
             <Textarea
               id="content"
-              placeholder="Enter knowledge base content"
+              placeholder={hasFile || selectedFile ? "Content is optional when a file is uploaded" : "Enter knowledge base content"}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="min-h-32"

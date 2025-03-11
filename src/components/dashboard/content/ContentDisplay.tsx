@@ -46,6 +46,34 @@ export function ContentDisplay({
     formattedContent = formattedContent.replace(/^- (.*?)$/gm, (_, text) => 
       `<li class="ml-4">${text}</li>`
     );
+    
+    // Add proper list tags around bullet points
+    formattedContent = formattedContent.replace(/(<li class="ml-4">.*?<\/li>)\n(<li class="ml-4">)/g, '$1$2');
+    formattedContent = formattedContent.replace(/(<li class="ml-4">.*?<\/li>)(?!\n<li class="ml-4">|\n<\/ul>)/g, '<ul>$1</ul>');
+    
+    // Handle multiple consecutive list items
+    let hasOpenUl = false;
+    const lines = formattedContent.split('\n');
+    formattedContent = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const isListItem = line.includes('<li class="ml-4">');
+      
+      if (isListItem && !hasOpenUl) {
+        formattedContent += '<ul>';
+        hasOpenUl = true;
+      } else if (!isListItem && hasOpenUl) {
+        formattedContent += '</ul>';
+        hasOpenUl = false;
+      }
+      
+      formattedContent += line + '\n';
+    }
+    
+    if (hasOpenUl) {
+      formattedContent += '</ul>';
+    }
 
     // Add paragraphs to regular text
     const paragraphs = formattedContent.split('\n\n');

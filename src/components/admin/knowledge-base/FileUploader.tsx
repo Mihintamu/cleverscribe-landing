@@ -9,9 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface FileUploaderProps {
   onContentParsed: (content: string) => void;
+  onFileSelected?: (file: File | null) => void;
 }
 
-export function FileUploader({ onContentParsed }: FileUploaderProps) {
+export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileUploading, setFileUploading] = useState(false);
   const [isParsingFile, setIsParsingFile] = useState(false);
@@ -19,8 +20,11 @@ export function FileUploader({ onContentParsed }: FileUploaderProps) {
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
+    const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null;
+    setSelectedFile(file);
+    
+    if (onFileSelected) {
+      onFileSelected(file);
     }
   };
 

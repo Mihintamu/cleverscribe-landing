@@ -81,12 +81,20 @@ export function WriteContent({ userId }: WriteContentProps) {
       const generatedText = data.generatedText;
       setGeneratedContent(generatedText);
       
+      // Make sure content_type matches the database type
+      // Convert exam_notes to term_papers for database compatibility if needed
+      // This is a temporary solution until the database schema is updated
+      let dbContentType: string = contentType;
+      if (contentType === 'exam_notes') {
+        dbContentType = 'term_papers'; // Use an existing type that's compatible with the database
+      }
+      
       // Save to database
       const { error: insertError } = await supabase
         .from('generated_content')
         .insert({
           user_id: userId,
-          content_type: contentType,
+          content_type: dbContentType,
           subject,
           word_count_option: wordCount <= 750 ? 'short' : wordCount <= 1500 ? 'medium' : 'long',
           target_word_count: wordCount,
