@@ -82,14 +82,14 @@ export function SubjectManager() {
   const handleDeleteSubject = async (id: string) => {
     try {
       // First, check if subject is being used in knowledge base
-      const { data: knowledgeData, error: knowledgeError } = await supabase
+      const { count, error: knowledgeError } = await supabase
         .from('knowledge_base')
-        .select('count', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('subject', id);
 
       if (knowledgeError) throw knowledgeError;
       
-      if (knowledgeData && knowledgeData > 0) {
+      if (count && count > 0) {
         toast({
           variant: "destructive",
           title: "Cannot Delete",
