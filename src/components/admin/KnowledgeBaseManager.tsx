@@ -6,15 +6,18 @@ import { PlusCircle } from "lucide-react";
 import { KnowledgeBaseList } from "./knowledge-base/KnowledgeBaseList";
 import { KnowledgeBaseForm } from "./knowledge-base/KnowledgeBaseForm";
 import { useKnowledgeBase } from "./knowledge-base/hooks/useKnowledgeBase";
+import { SearchBar } from "./knowledge-base/SearchBar";
 
 export function KnowledgeBaseManager() {
   const { 
     knowledgeBase, 
     subjects, 
     loading, 
+    searchTerm,
     fetchKnowledgeBase, 
     handleEdit, 
-    handleDelete 
+    handleDelete,
+    handleSearch
   } = useKnowledgeBase();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -44,11 +47,17 @@ export function KnowledgeBaseManager() {
           </Button>
         </CardHeader>
         <CardContent>
+          <SearchBar 
+            subjects={subjects}
+            onSearch={handleSearch}
+          />
+          
           <KnowledgeBaseList 
             items={knowledgeBase}
             onEdit={onEdit}
             onDelete={handleDelete}
             isLoading={loading}
+            searchTerm={searchTerm}
           />
         </CardContent>
       </Card>

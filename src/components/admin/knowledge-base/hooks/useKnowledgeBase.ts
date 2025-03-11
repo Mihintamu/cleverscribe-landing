@@ -21,14 +21,22 @@ export type KnowledgeBase = {
 
 export function useKnowledgeBase() {
   const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBase[]>([]);
+  const [filteredKnowledgeBase, setFilteredKnowledgeBase] = useState<KnowledgeBase[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [subjectFilter, setSubjectFilter] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
     fetchSubjects();
     fetchKnowledgeBase();
   }, []);
+
+  // Apply filters when knowledgeBase, searchTerm, or subjectFilter changes
+  useEffect(() => {
+    applyFilters();
+  }, [knowledgeBase, searchTerm, subjectFilter]);
 
   const fetchSubjects = async () => {
     try {
@@ -90,6 +98,38 @@ export function useKnowledgeBase() {
     }
   };
 
+  // Function to apply search and filter
+  const applyFilters = () => {
+    let filtered = [...knowledgeBase];
+    
+    // Apply subject filter if selected
+    if (subjectFilter) {
+      if (subjectFilter === "common") {
+        filtered = filtered.filter(item => item.is_common);
+      } else {
+        filtered = filtered.filter(item => item.subject === subjectFilter);
+      }
+    }
+    
+    // Apply search term if entered
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(item => {
+        const contentMatch = item.content && item.content.toLowerCase().includes(searchLower);
+        const subjectMatch = item.subject_name && item.subject_name.toLowerCase().includes(searchLower);
+        return contentMatch || subjectMatch;
+      });
+    }
+    
+    setFilteredKnowledgeBase(filtered);
+  };
+
+  // Handle search and filter changes
+  const handleSearch = (query: string, subject: string) => {
+    setSearchTerm(query);
+    setSubjectFilter(subject);
+  };
+
   const handleEdit = (item: KnowledgeBase) => {
     return item;
   };
@@ -145,12 +185,15 @@ export function useKnowledgeBase() {
   };
 
   return {
-    knowledgeBase,
+    knowledgeBase: filteredKnowledgeBase,
+    allKnowledgeBase: knowledgeBase,
     subjects,
     loading,
+    searchTerm,
     fetchKnowledgeBase,
     fetchSubjects,
     handleEdit,
-    handleDelete
+    handleDelete,
+    handleSearch
   };
 }

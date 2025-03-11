@@ -7,9 +7,16 @@ interface KnowledgeBaseListProps {
   onEdit: (item: KnowledgeBase) => void;
   onDelete: (id: string) => void;
   isLoading?: boolean;
+  searchTerm?: string;
 }
 
-export function KnowledgeBaseList({ items, onEdit, onDelete, isLoading }: KnowledgeBaseListProps) {
+export function KnowledgeBaseList({ 
+  items, 
+  onEdit, 
+  onDelete, 
+  isLoading,
+  searchTerm
+}: KnowledgeBaseListProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -21,8 +28,12 @@ export function KnowledgeBaseList({ items, onEdit, onDelete, isLoading }: Knowle
   if (!items || items.length === 0) {
     return (
       <div className="py-8 text-center">
-        <p className="text-muted-foreground">No knowledge base entries found.</p>
-        <p className="text-sm text-muted-foreground mt-2">Click 'Add Knowledge' to create one.</p>
+        <p className="text-muted-foreground">
+          {searchTerm ? "No results found for your search." : "No knowledge base entries found."}
+        </p>
+        {!searchTerm && (
+          <p className="text-sm text-muted-foreground mt-2">Click 'Add Knowledge' to create one.</p>
+        )}
       </div>
     );
   }

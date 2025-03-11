@@ -42,6 +42,24 @@ export function ContentDisplay({
       `<em class="italic">${text}</em>`
     );
 
+    // Format LaTeX-style formulas with proper formatting
+    formattedContent = formattedContent.replace(/\\[ (.*?) \\]/g, (_, formula) => {
+      // Process specific formula patterns
+      formula = formula.replace(/\\frac{(.*?)}{(.*?)}/g, (_, numerator, denominator) => 
+        `<div class="inline-flex flex-col items-center justify-center mx-1">
+          <div class="border-b border-current px-1">${numerator}</div>
+          <div class="px-1">${denominator}</div>
+        </div>`
+      );
+      
+      // Replace \text{} with spans
+      formula = formula.replace(/\\text{(.*?)}/g, (_, text) => 
+        `<span>${text}</span>`
+      );
+      
+      return `<div class="my-4 py-2 flex justify-center items-center bg-muted/30 rounded-md">${formula}</div>`;
+    });
+
     // Replace fractions (1/2, 3/4, etc.) with properly formatted fractions
     formattedContent = formattedContent.replace(/(\d+)\/(\d+)/g, (match, numerator, denominator) => 
       `<span class="inline-flex flex-col items-center justify-center mx-1">
