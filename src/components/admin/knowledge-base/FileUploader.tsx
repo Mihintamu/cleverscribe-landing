@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface FileUploaderProps {
   onContentParsed: (content: string) => void;
-  onFileSelected?: (file: File | null) => void;
+  onFileSelected: (file: File | null) => void;
 }
 
 export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderProps) {
@@ -22,10 +22,7 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null;
     setSelectedFile(file);
-    
-    if (onFileSelected) {
-      onFileSelected(file);
-    }
+    onFileSelected(file);
   };
 
   const handleFileUpload = async () => {
@@ -38,46 +35,54 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
       return;
     }
 
-    uploadFile(
-      selectedFile,
-      (fileUrl) => {
-        toast({
-          title: "Success",
-          description: "File uploaded successfully",
-        });
-        
-        // Start parsing the document
-        parseDocument(
-          fileUrl,
-          selectedFile.type,
-          (extractedText) => {
-            onContentParsed(extractedText);
-            toast({
-              title: "Success",
-              description: "Document parsed successfully",
-            });
+    try {
+      setFileUploading(true);
+      
+      await new Promise<void>((resolve, reject) => {
+        uploadFile(
+          selectedFile,
+          (fileUrl) => {
+            // Start parsing the document
+            parseDocument(
+              fileUrl,
+              selectedFile.type,
+              (extractedText) => {
+                onContentParsed(extractedText);
+                toast({
+                  title: "Success",
+                  description: "Document uploaded and parsed successfully",
+                });
+                resolve();
+              },
+              (errorMessage) => {
+                toast({
+                  variant: "destructive",
+                  title: "Error parsing document",
+                  description: errorMessage,
+                });
+                reject(new Error(errorMessage));
+              },
+              () => setIsParsingFile(true),
+              () => setIsParsingFile(false)
+            );
           },
           (errorMessage) => {
             toast({
               variant: "destructive",
-              title: "Error",
+              title: "Error uploading file",
               description: errorMessage,
             });
+            reject(new Error(errorMessage));
           },
-          () => setIsParsingFile(true),
-          () => setIsParsingFile(false)
+          () => {},
+          () => {}
         );
-      },
-      (errorMessage) => {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: errorMessage,
-        });
-      },
-      () => setFileUploading(true),
-      () => setFileUploading(false)
-    );
+      });
+    } catch (error) {
+      console.error("File upload error:", error);
+    } finally {
+      setFileUploading(false);
+    }
   };
 
   return (

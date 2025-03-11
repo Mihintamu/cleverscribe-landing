@@ -115,7 +115,7 @@ export function KnowledgeBaseManager() {
 
       // If there's a file URL, delete the file from storage
       if (data?.file_url) {
-        // Extract the file path from the URL instead of using storageUrl
+        // Extract the file path from the URL
         const filePath = data.file_url.split('/').pop();
         if (filePath) {
           const { error: storageError } = await supabase.storage
@@ -156,10 +156,6 @@ export function KnowledgeBaseManager() {
     setIsDialogOpen(false);
     setEditingItem(null);
   };
-
-  if (loading) {
-    return <div>Loading knowledge base...</div>;
-  }
 
   return (
     <div className="space-y-6">

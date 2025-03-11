@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUploader } from "./FileUploader";
+
+import { generateUniqueFilePath, getPublicFileUrl, uploadFile } from "./utils";
 
 type Subject = {
   id: string;
@@ -46,9 +47,9 @@ export function KnowledgeBaseForm({
   const [isCommon, setIsCommon] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [hasFile, setHasFile] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
-  // Reset form when dialog opens/closes or edit item changes
   useEffect(() => {
     if (isOpen && editItem) {
       setIsCommon(editItem.is_common);
@@ -58,7 +59,6 @@ export function KnowledgeBaseForm({
         setSelectedSubject(editItem.subject);
       }
     } else if (isOpen) {
-      // Reset form for new item
       setSelectedSubject("");
       setContent("");
       setIsCommon(false);
@@ -77,9 +77,7 @@ export function KnowledgeBaseForm({
   };
 
   const handleSubmit = async () => {
-    // Validation
     if (isCommon) {
-      // For common knowledge, check if content or file is present
       if (!content.trim() && !hasFile && !selectedFile) {
         toast({
           variant: "destructive",
@@ -89,7 +87,6 @@ export function KnowledgeBaseForm({
         return;
       }
     } else {
-      // For regular knowledge, check if subject and (content or file) are present
       if (!selectedSubject) {
         toast({
           variant: "destructive",
@@ -109,11 +106,37 @@ export function KnowledgeBaseForm({
       }
     }
 
+    setIsUploading(true);
+
     try {
-      const fileInfo = selectedFile ? {
-        file_url: getPublicFileUrl(generateUniqueFilePath(selectedFile.name)),
-        file_type: selectedFile.type
-      } : {};
+      let fileInfo = {};
+      
+      if (selectedFile) {
+        await new Promise<void>((resolve, reject) => {
+          uploadFile(
+            selectedFile,
+            (fileUrl) => {
+              fileInfo = {
+                file_url: fileUrl,
+                file_type: selectedFile.type
+              };
+              resolve();
+            },
+            (errorMessage) => {
+              reject(new Error(errorMessage));
+            },
+            () => {},
+            () => {}
+          );
+        });
+      }
+
+      if (editItem?.file_url && !selectedFile) {
+        fileInfo = {
+          file_url: editItem.file_url,
+          file_type: editItem.file_type
+        };
+      }
 
       if (editItem) {
         const { error } = await supabase
@@ -158,6 +181,8 @@ export function KnowledgeBaseForm({
         title: "Error",
         description: error.message || "Failed to save knowledge base entry",
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -216,15 +241,12 @@ export function KnowledgeBaseForm({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSubmit}>
-            {editItem ? "Update" : "Add"}
+          <Button variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={isUploading}>
+            {isUploading ? "Saving..." : (editItem ? "Update" : "Add")}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-// Import the utility functions so they're available in this component scope
-import { generateUniqueFilePath, getPublicFileUrl } from "./utils";

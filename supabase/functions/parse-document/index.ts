@@ -23,8 +23,24 @@ serve(async (req) => {
     const { fileUrl, fileType } = await req.json();
     console.log('Received request to parse document:', { fileUrl, fileType });
 
-    // Fetch the file from storage
-    const storagePath = fileUrl.replace(`${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/knowledge_base_files/`, '');
+    // Ensure storage bucket exists
+    const bucketName = 'knowledge_base_files';
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (!buckets?.find(b => b.name === bucketName)) {
+      await supabase.storage.createBucket(bucketName, { public: true });
+      console.log(`Created bucket: ${bucketName}`);
+    }
+
+    // Extract the file path from the URL
+    const storageUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/${bucketName}/`;
+    let storagePath = '';
+    
+    if (fileUrl.startsWith(storageUrl)) {
+      storagePath = fileUrl.substring(storageUrl.length);
+    } else {
+      // Try to extract the path as the last part of the URL
+      storagePath = fileUrl.split('/').pop() || '';
+    }
     
     if (!storagePath) {
       throw new Error('Invalid file URL');
@@ -34,7 +50,7 @@ serve(async (req) => {
     
     const { data: fileData, error: fileError } = await supabase
       .storage
-      .from('knowledge_base_files')
+      .from(bucketName)
       .download(storagePath);
 
     if (fileError) {
