@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ContentForm } from "./content/ContentForm";
 import { ContentDisplay } from "./content/ContentDisplay";
-import { wordCountMap } from "./content/utils";
 
 export type ContentType = 
   | 'assignments' 
@@ -27,7 +26,7 @@ interface WriteContentProps {
 export function WriteContent({ userId }: WriteContentProps) {
   const [contentType, setContentType] = useState<ContentType>('essays');
   const [subject, setSubject] = useState("");
-  const [wordCountOption, setWordCountOption] = useState<WordCountOption>('medium');
+  const [wordCount, setWordCount] = useState(1000);
   const [generatedContent, setGeneratedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -70,7 +69,7 @@ export function WriteContent({ userId }: WriteContentProps) {
         body: {
           contentType,
           subject,
-          wordCount: wordCountMap[wordCountOption]
+          wordCount
         }
       });
 
@@ -86,8 +85,8 @@ export function WriteContent({ userId }: WriteContentProps) {
           user_id: userId,
           content_type: contentType,
           subject,
-          word_count_option: wordCountOption,
-          target_word_count: wordCountMap[wordCountOption],
+          word_count_option: wordCount <= 750 ? 'short' : wordCount <= 1500 ? 'medium' : 'long',
+          target_word_count: wordCount,
           generated_text: generatedText
         });
       
@@ -148,8 +147,8 @@ export function WriteContent({ userId }: WriteContentProps) {
         setContentType={setContentType}
         subject={subject}
         setSubject={setSubject}
-        wordCountOption={wordCountOption}
-        setWordCountOption={setWordCountOption}
+        wordCount={wordCount}
+        setWordCount={setWordCount}
         isGenerating={isGenerating}
         onGenerate={handleGenerate}
       />

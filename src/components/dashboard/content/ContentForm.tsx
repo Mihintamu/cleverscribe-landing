@@ -11,15 +11,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ContentType, WordCountOption } from "../WriteContent";
+import { ContentType } from "../WriteContent";
+import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 
 interface ContentFormProps {
   contentType: ContentType;
   setContentType: (value: ContentType) => void;
   subject: string;
   setSubject: (value: string) => void;
-  wordCountOption: WordCountOption;
-  setWordCountOption: (value: WordCountOption) => void;
+  wordCount: number;
+  setWordCount: (value: number) => void;
   isGenerating: boolean;
   onGenerate: () => void;
 }
@@ -29,8 +31,8 @@ export function ContentForm({
   setContentType,
   subject,
   setSubject,
-  wordCountOption,
-  setWordCountOption,
+  wordCount,
+  setWordCount,
   isGenerating,
   onGenerate,
 }: ContentFormProps) {
@@ -46,6 +48,10 @@ export function ContentForm({
     'article_reviews', 
     'term_papers'
   ];
+
+  const handleSliderChange = (value: number[]) => {
+    setWordCount(value[0]);
+  };
 
   return (
     <Card>
@@ -82,20 +88,27 @@ export function ContentForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="word-count">Word Count</Label>
-            <Select
-              value={wordCountOption}
-              onValueChange={(value) => setWordCountOption(value as WordCountOption)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select word count" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="short">Short (~500 words)</SelectItem>
-                <SelectItem value="medium">Medium (~1000 words)</SelectItem>
-                <SelectItem value="long">Long (~2000 words)</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="word-count">Word Count: {wordCount}</Label>
+            <div className="flex items-center gap-4">
+              <Slider
+                id="word-count"
+                defaultValue={[wordCount]}
+                min={500}
+                max={2500}
+                step={100}
+                onValueChange={handleSliderChange}
+                className="flex-1"
+              />
+              <Input 
+                type="number"
+                value={wordCount}
+                onChange={(e) => setWordCount(parseInt(e.target.value, 10) || 500)}
+                min={500}
+                max={2500}
+                step={100}
+                className="w-20"
+              />
+            </div>
           </div>
 
           <Button 
