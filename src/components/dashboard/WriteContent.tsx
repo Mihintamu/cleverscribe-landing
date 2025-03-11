@@ -84,10 +84,8 @@ export function WriteContent({ userId }: WriteContentProps) {
       // Make sure content_type matches the database type
       // Convert exam_notes to term_papers for database compatibility if needed
       // This is a temporary solution until the database schema is updated
-      let dbContentType: string = contentType;
-      if (contentType === 'exam_notes') {
-        dbContentType = 'term_papers'; // Use an existing type that's compatible with the database
-      }
+      let dbContentType: "assignments" | "reports" | "research_paper" | "essays" | "thesis" | "presentation" | "case_studies" | "book_review" | "article_reviews" | "term_papers" = 
+        contentType === 'exam_notes' ? 'term_papers' : contentType as any;
       
       // Save to database
       const { error: insertError } = await supabase
