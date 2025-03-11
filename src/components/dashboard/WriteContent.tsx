@@ -62,62 +62,62 @@ export function WriteContent({ userId }: WriteContentProps) {
           title: "Insufficient Credits",
           description: "You don't have enough credits. Please upgrade your plan to continue."
         });
-        setIsGenerating(false);
         return;
       }
 
-      // Placeholder for actual AI content generation
-      // In a real app, this would call an edge function or API
-      // For now, we'll simulate a delay and generate placeholder text
-      setTimeout(async () => {
-        const targetWordCount = wordCountMap[wordCountOption];
-        const placeholderContent = `This is a sample ${contentType} about ${subject}. It would be approximately ${targetWordCount} words in a real application.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`;
-        
-        setGeneratedContent(placeholderContent);
-        
-        // Save to database
-        const { error: insertError } = await supabase
-          .from('generated_content')
-          .insert({
-            user_id: userId,
-            content_type: contentType,
-            subject,
-            word_count_option: wordCountOption,
-            target_word_count: targetWordCount,
-            generated_text: placeholderContent
-          });
-        
-        if (insertError) {
-          throw new Error("Failed to save generated content");
+      // Call the edge function to generate content
+      const { data, error } = await supabase.functions.invoke('generate-content', {
+        body: {
+          contentType,
+          subject,
+          wordCount: wordCountMap[wordCountOption]
         }
-        
-        // Update user's remaining credits
-        const { error: updateError } = await supabase
-          .from('user_subscriptions')
-          .update({ 
-            credits_remaining: subscriptionData.credits_remaining - 1 
-          })
-          .eq('user_id', userId);
-        
-        if (updateError) {
-          throw new Error("Failed to update credits");
-        }
+      });
 
-        toast({
-          title: "Content Generated",
-          description: "Your content has been generated successfully",
+      if (error) throw error;
+      
+      const generatedText = data.generatedText;
+      setGeneratedContent(generatedText);
+      
+      // Save to database
+      const { error: insertError } = await supabase
+        .from('generated_content')
+        .insert({
+          user_id: userId,
+          content_type: contentType,
+          subject,
+          word_count_option: wordCountOption,
+          target_word_count: wordCountMap[wordCountOption],
+          generated_text: generatedText
         });
-        
-        setIsGenerating(false);
-      }, 2000);
+      
+      if (insertError) {
+        throw new Error("Failed to save generated content");
+      }
+      
+      // Update user's remaining credits
+      const { error: updateError } = await supabase
+        .from('user_subscriptions')
+        .update({ 
+          credits_remaining: subscriptionData.credits_remaining - 1 
+        })
+        .eq('user_id', userId);
+      
+      if (updateError) {
+        throw new Error("Failed to update credits");
+      }
+
+      toast({
+        title: "Content Generated",
+        description: "Your content has been generated successfully",
+      });
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
         description: error.message || "An error occurred while generating content",
       });
+    } finally {
       setIsGenerating(false);
     }
   };
