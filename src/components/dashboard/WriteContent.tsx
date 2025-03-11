@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { FileSave, Download } from "lucide-react";
+import { Save, Download } from "lucide-react";
 
 // Word count mapping
 const wordCountMap = {
@@ -246,7 +246,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor i
                     onClick={downloadAsText}
                     title="Download as Text"
                   >
-                    <FileSave className="w-4 h-4 mr-2" />
+                    <Save className="w-4 h-4 mr-2" />
                     TXT
                   </Button>
                   <Button

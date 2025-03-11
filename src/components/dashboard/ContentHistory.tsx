@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { FileSave, Download, Eye, Calendar } from "lucide-react";
+import { Save, Download, Eye, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ContentType, WordCountOption } from "./WriteContent";
 
@@ -160,7 +160,7 @@ export function ContentHistory({ userId }: ContentHistoryProps) {
                       onClick={() => downloadAsText(selectedItem)}
                       title="Download as Text"
                     >
-                      <FileSave className="w-4 h-4 mr-2" />
+                      <Save className="w-4 h-4 mr-2" />
                       TXT
                     </Button>
                     <Button
