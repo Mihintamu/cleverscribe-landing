@@ -16,6 +16,39 @@ serve(async (req) => {
     const { contentType, subject, wordCount } = await req.json();
     console.log('Received request:', { contentType, subject, wordCount });
 
+    // First, let's try to get the available models
+    const modelsResponse = await fetch('https://api.openai.com/v1/models', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!modelsResponse.ok) {
+      const errorData = await modelsResponse.json();
+      console.error('OpenAI API models error:', errorData);
+      throw new Error(`OpenAI API models error: ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const modelsData = await modelsResponse.json();
+    console.log('Available models:', modelsData.data.map(model => model.id).join(', '));
+    
+    // Try to find an available model to use
+    let modelToUse = 'gpt-3.5-turbo';
+    if (modelsData.data.some(model => model.id === 'gpt-3.5-turbo')) {
+      modelToUse = 'gpt-3.5-turbo';
+    } else if (modelsData.data.some(model => model.id === 'gpt-4o-mini')) {
+      modelToUse = 'gpt-4o-mini';
+    } else if (modelsData.data.some(model => model.id === 'gpt-4')) {
+      modelToUse = 'gpt-4';
+    } else {
+      // Fallback to the first available model if none of our preferred ones are available
+      modelToUse = modelsData.data[0]?.id || 'gpt-3.5-turbo';
+    }
+    
+    console.log(`Using model: ${modelToUse}`);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -23,7 +56,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: modelToUse,
         messages: [
           {
             role: 'system',
