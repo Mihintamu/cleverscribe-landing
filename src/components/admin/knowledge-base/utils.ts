@@ -13,6 +13,29 @@ export const getPublicFileUrl = (filePath: string): string => {
   return data.publicUrl;
 };
 
+// Extract filename from a file URL
+export const extractFilenameFromUrl = (fileUrl: string): string => {
+  if (!fileUrl) return '';
+  const urlParts = fileUrl.split('/');
+  return urlParts[urlParts.length - 1];
+};
+
+// Get friendly file type
+export const getFriendlyFileType = (fileType: string): string => {
+  if (!fileType) return '';
+  
+  const fileTypeMappings: Record<string, string> = {
+    'application/pdf': 'PDF',
+    'text/plain': 'Text',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word',
+    'application/msword': 'Word',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
+    'application/vnd.ms-excel': 'Excel'
+  };
+  
+  return fileTypeMappings[fileType] || fileType;
+};
+
 // Parse document using edge function
 export const parseDocument = async (
   fileUrl: string, 
@@ -25,9 +48,13 @@ export const parseDocument = async (
   onStart();
   
   try {
+    console.log(`Parsing document: ${fileUrl}, type: ${fileType}`);
+    
     const response = await supabase.functions.invoke('parse-document', {
       body: { fileUrl, fileType },
     });
+    
+    console.log('Parse document response:', response);
 
     if (response.error) {
       throw new Error(response.error.message || "Failed to parse document");
@@ -40,6 +67,7 @@ export const parseDocument = async (
       throw new Error("Failed to extract text from document");
     }
   } catch (error: any) {
+    console.error('Document parsing error:', error);
     onError(error.message || "Failed to parse document");
   } finally {
     onEnd();
@@ -57,19 +85,36 @@ export const uploadFile = async (
   onStart();
   
   try {
+    console.log(`Uploading file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
     const filePath = generateUniqueFilePath(file.name);
     
+    // Ensure the bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketName = 'knowledge_base_files';
+    
+    if (!buckets?.find(b => b.name === bucketName)) {
+      console.log(`Creating bucket: ${bucketName}`);
+      const { error: bucketError } = await supabase.storage.createBucket(bucketName, { public: true });
+      if (bucketError) throw bucketError;
+    }
+    
     const { data, error } = await supabase.storage
-      .from('knowledge_base_files')
-      .upload(filePath, file);
+      .from(bucketName)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
 
     if (error) throw error;
+    console.log(`File uploaded successfully: ${data.path}`);
 
-    // Get the public URL for the uploaded file using the getPublicUrl method
+    // Get the public URL for the uploaded file
     const fileUrl = getPublicFileUrl(data.path);
+    console.log(`Public URL: ${fileUrl}`);
     
     onSuccess(fileUrl);
   } catch (error: any) {
+    console.error('File upload error:', error);
     onError(error.message || "Failed to upload file");
   } finally {
     onEnd();

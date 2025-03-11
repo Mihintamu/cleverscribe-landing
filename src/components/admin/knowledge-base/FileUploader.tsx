@@ -16,6 +16,7 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileUploading, setFileUploading] = useState(false);
   const [isParsingFile, setIsParsingFile] = useState(false);
+  const [parsingProgress, setParsingProgress] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -23,6 +24,9 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
     const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null;
     setSelectedFile(file);
     onFileSelected(file);
+    
+    // Reset progress message when a new file is selected
+    setParsingProgress("");
   };
 
   const handleFileUpload = async () => {
@@ -37,16 +41,20 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
 
     try {
       setFileUploading(true);
+      setParsingProgress("Starting file upload...");
       
       await new Promise<void>((resolve, reject) => {
         uploadFile(
           selectedFile,
           (fileUrl) => {
             // Start parsing the document
+            setParsingProgress("File uploaded successfully. Starting document parsing...");
+            
             parseDocument(
               fileUrl,
               selectedFile.type,
               (extractedText) => {
+                setParsingProgress("Document parsed successfully!");
                 onContentParsed(extractedText);
                 toast({
                   title: "Success",
@@ -55,6 +63,7 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
                 resolve();
               },
               (errorMessage) => {
+                setParsingProgress(`Error: ${errorMessage}`);
                 toast({
                   variant: "destructive",
                   title: "Error parsing document",
@@ -62,11 +71,15 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
                 });
                 reject(new Error(errorMessage));
               },
-              () => setIsParsingFile(true),
+              () => {
+                setIsParsingFile(true);
+                setParsingProgress("Parsing document content... This may take a minute for large files.");
+              },
               () => setIsParsingFile(false)
             );
           },
           (errorMessage) => {
+            setParsingProgress(`Error: ${errorMessage}`);
             toast({
               variant: "destructive",
               title: "Error uploading file",
@@ -74,7 +87,7 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
             });
             reject(new Error(errorMessage));
           },
-          () => {},
+          () => setParsingProgress("Uploading file..."),
           () => {}
         );
       });
@@ -95,14 +108,15 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
           type="file" 
           onChange={handleFileChange}
           accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+          disabled={fileUploading || isParsingFile}
         />
         <Button 
           type="button"
           onClick={handleFileUpload}
-          disabled={!selectedFile || fileUploading}
+          disabled={!selectedFile || fileUploading || isParsingFile}
           size="sm"
         >
-          {fileUploading ? (
+          {fileUploading || isParsingFile ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <FileUp className="h-4 w-4" />
@@ -114,10 +128,10 @@ export function FileUploader({ onContentParsed, onFileSelected }: FileUploaderPr
           Selected file: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
         </p>
       )}
-      {isParsingFile && (
+      {parsingProgress && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Parsing document content...</span>
+          {isParsingFile && <Loader2 className="h-4 w-4 animate-spin" />}
+          <span>{parsingProgress}</span>
         </div>
       )}
     </div>
