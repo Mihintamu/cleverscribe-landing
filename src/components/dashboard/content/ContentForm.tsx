@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,12 +14,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { ContentType } from "../WriteContent";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ContentFormProps {
   contentType: ContentType;
   setContentType: (value: ContentType) => void;
   subject: string;
   setSubject: (value: string) => void;
+  selectedSubjectId: string;
+  setSelectedSubjectId: (value: string) => void;
   wordCount: number;
   setWordCount: (value: number) => void;
   isGenerating: boolean;
@@ -31,11 +34,16 @@ export function ContentForm({
   setContentType,
   subject,
   setSubject,
+  selectedSubjectId,
+  setSelectedSubjectId,
   wordCount,
   setWordCount,
   isGenerating,
   onGenerate,
 }: ContentFormProps) {
+  const [subjectOptions, setSubjectOptions] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  
   const contentTypes: ContentType[] = [
     'assignments', 
     'reports', 
@@ -46,8 +54,30 @@ export function ContentForm({
     'case_studies', 
     'book_review', 
     'article_reviews', 
-    'term_papers'
+    'term_papers',
+    'exam_notes'
   ];
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('subjects')
+          .select('id, name')
+          .order('name');
+        
+        if (error) throw error;
+        setSubjectOptions(data || []);
+      } catch (error) {
+        console.error('Error fetching subjects:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubjects();
+  }, []);
 
   const handleSliderChange = (value: number[]) => {
     setWordCount(value[0]);
@@ -75,12 +105,32 @@ export function ContentForm({
               </SelectContent>
             </Select>
           </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="subject-id">Subject</Label>
+            <Select
+              value={selectedSubjectId}
+              onValueChange={setSelectedSubjectId}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loading ? "Loading subjects..." : "Select a subject"} />
+              </SelectTrigger>
+              <SelectContent>
+                {subjectOptions.map((subj) => (
+                  <SelectItem key={subj.id} value={subj.id}>
+                    {subj.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-2">
-            <Label htmlFor="subject">Subject/Topic</Label>
+            <Label htmlFor="subject">Topic</Label>
             <Textarea 
               id="subject"
-              placeholder="Enter the subject or topic for your content"
+              placeholder="Enter the topic for your content"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="min-h-[80px]"
@@ -114,7 +164,7 @@ export function ContentForm({
           <Button 
             className="w-full" 
             onClick={onGenerate}
-            disabled={isGenerating || !subject}
+            disabled={isGenerating || !subject || !selectedSubjectId}
           >
             {isGenerating ? "Generating..." : "Generate Content"}
           </Button>

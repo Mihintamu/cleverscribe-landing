@@ -15,7 +15,8 @@ export type ContentType =
   | 'case_studies' 
   | 'book_review' 
   | 'article_reviews' 
-  | 'term_papers';
+  | 'term_papers'
+  | 'exam_notes';
 
 export type WordCountOption = 'short' | 'medium' | 'long';
 
@@ -26,17 +27,18 @@ interface WriteContentProps {
 export function WriteContent({ userId }: WriteContentProps) {
   const [contentType, setContentType] = useState<ContentType>('essays');
   const [subject, setSubject] = useState("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [wordCount, setWordCount] = useState(1000);
   const [generatedContent, setGeneratedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
-    if (!subject) {
+    if (!subject || !selectedSubjectId) {
       toast({
         variant: "destructive",
-        title: "Subject is required",
-        description: "Please enter a subject or topic to generate content."
+        title: "Required fields missing",
+        description: "Please select a subject and enter a topic to generate content."
       });
       return;
     }
@@ -68,7 +70,8 @@ export function WriteContent({ userId }: WriteContentProps) {
       const { data, error } = await supabase.functions.invoke('generate-content', {
         body: {
           contentType,
-          subject,
+          subjectId: selectedSubjectId,
+          topic: subject,
           wordCount
         }
       });
@@ -121,11 +124,21 @@ export function WriteContent({ userId }: WriteContentProps) {
     }
   };
 
+  const formatTextContent = (content: string) => {
+    // Remove Markdown asterisks and hashtags while preserving line breaks
+    return content.replace(/\*\*(.*?)\*\*/g, '$1')
+                 .replace(/\*(.*?)\*/g, '$1')
+                 .replace(/^### (.*?)$/gm, '$1')
+                 .replace(/^## (.*?)$/gm, '$1')
+                 .replace(/^# (.*?)$/gm, '$1');
+  };
+
   const downloadAsText = () => {
     if (!generatedContent) return;
     
+    const formattedContent = formatTextContent(generatedContent);
     const element = document.createElement("a");
-    const file = new Blob([generatedContent], {type: 'text/plain'});
+    const file = new Blob([formattedContent], {type: 'text/plain'});
     element.href = URL.createObjectURL(file);
     element.download = `${contentType}_${subject.replace(/\s+/g, '_')}.txt`;
     document.body.appendChild(element);
@@ -147,6 +160,8 @@ export function WriteContent({ userId }: WriteContentProps) {
         setContentType={setContentType}
         subject={subject}
         setSubject={setSubject}
+        selectedSubjectId={selectedSubjectId}
+        setSelectedSubjectId={setSelectedSubjectId}
         wordCount={wordCount}
         setWordCount={setWordCount}
         isGenerating={isGenerating}

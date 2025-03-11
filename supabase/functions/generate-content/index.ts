@@ -19,50 +19,51 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { contentType, subject, wordCount } = await req.json();
-    console.log('Received request:', { contentType, subject, wordCount });
+    const { contentType, subjectId, topic, wordCount } = await req.json();
+    console.log('Received request:', { contentType, subjectId, topic, wordCount });
+
+    // Get subject name
+    const { data: subjectData, error: subjectError } = await supabase
+      .from('subjects')
+      .select('name')
+      .eq('id', subjectId)
+      .single();
+
+    if (subjectError) {
+      throw new Error(`Error fetching subject: ${subjectError.message}`);
+    }
+
+    const subjectName = subjectData?.name || "General";
+    console.log('Subject name:', subjectName);
 
     // Get knowledge base instructions
     let knowledgeBaseInstructions = "";
 
-    // First, get common knowledge base instructions
+    // First, get common knowledge base instructions for the specific content type
     const { data: commonKnowledge, error: commonError } = await supabase
       .from('knowledge_base')
       .select('content')
       .eq('is_common', true);
 
     if (!commonError && commonKnowledge && commonKnowledge.length > 0) {
-      knowledgeBaseInstructions += "Common Instructions:\n";
+      knowledgeBaseInstructions += "Content Type Guidelines:\n";
       commonKnowledge.forEach((item) => {
         knowledgeBaseInstructions += item.content + "\n\n";
       });
     }
 
     // Then, get subject specific knowledge if available
-    const { data: subjects, error: subjectError } = await supabase
-      .from('subjects')
-      .select('id, name');
+    const { data: subjectKnowledge, error: knowledgeError } = await supabase
+      .from('knowledge_base')
+      .select('content')
+      .eq('subject', subjectId)
+      .eq('is_common', false);
 
-    if (!subjectError && subjects) {
-      // Find subject that matches the content type
-      const matchingSubject = subjects.find(subj => 
-        subj.name.toLowerCase() === contentType.toLowerCase().replace('_', ' ')
-      );
-
-      if (matchingSubject) {
-        const { data: subjectKnowledge, error: knowledgeError } = await supabase
-          .from('knowledge_base')
-          .select('content')
-          .eq('subject', matchingSubject.id)
-          .eq('is_common', false);
-
-        if (!knowledgeError && subjectKnowledge && subjectKnowledge.length > 0) {
-          knowledgeBaseInstructions += `\nSpecific instructions for ${matchingSubject.name}:\n`;
-          subjectKnowledge.forEach((item) => {
-            knowledgeBaseInstructions += item.content + "\n\n";
-          });
-        }
-      }
+    if (!knowledgeError && subjectKnowledge && subjectKnowledge.length > 0) {
+      knowledgeBaseInstructions += `\nSpecific instructions for ${subjectName}:\n`;
+      subjectKnowledge.forEach((item) => {
+        knowledgeBaseInstructions += item.content + "\n\n";
+      });
     }
 
     console.log('Using knowledge base instructions:', knowledgeBaseInstructions ? 'Yes' : 'No');
@@ -101,7 +102,18 @@ serve(async (req) => {
     console.log(`Using model: ${modelToUse}`);
 
     // Prepare the system message with knowledge base instructions if available
-    let systemMessage = `You are an expert at writing ${contentType}. Create content that is approximately ${wordCount} words.`;
+    let systemMessage = `You are an expert at writing ${contentType} about ${subjectName}. 
+Create content that is approximately ${wordCount} words.
+Format the content with clear sections, well-structured paragraphs, and logical flow.
+
+For formatting:
+- Use proper heading levels (Heading 1 for main title, Heading 2 for sections, Heading 3 for subsections)
+- Make important terms bold
+- Use italics for emphasis where appropriate
+- Use bullet points for lists
+- Create well-structured paragraphs with clear topic sentences
+
+Make sure the content is engaging, informative, and appropriate for academic purposes.`;
     
     if (knowledgeBaseInstructions) {
       systemMessage += `\n\nPlease follow these specific guidelines:\n${knowledgeBaseInstructions}`;
@@ -122,7 +134,7 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Write a ${contentType} about: ${subject}`
+            content: `Write a ${contentType} about: ${topic}`
           }
         ],
       }),
