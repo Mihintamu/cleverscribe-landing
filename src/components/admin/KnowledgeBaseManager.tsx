@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, FileUp, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
 type Subject = {
@@ -23,6 +23,8 @@ type KnowledgeBase = {
   is_common: boolean;
   created_at: string;
   subject_name?: string;
+  file_url?: string;
+  file_type?: string;
 };
 
 export function KnowledgeBaseManager() {
@@ -35,6 +37,11 @@ export function KnowledgeBaseManager() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fileUploading, setFileUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [parsedContent, setParsedContent] = useState<string>("");
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -102,6 +109,91 @@ export function KnowledgeBaseManager() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No file selected",
+      });
+      return;
+    }
+
+    setFileUploading(true);
+    try {
+      const fileExt = selectedFile.name.split('.').pop();
+      const filePath = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('knowledge_base_files')
+        .upload(filePath, selectedFile);
+
+      if (error) throw error;
+
+      // Get the public URL for the uploaded file
+      const fileUrl = `${supabase.storageUrl}/object/public/knowledge_base_files/${data.path}`;
+      
+      toast({
+        title: "Success",
+        description: "File uploaded successfully",
+      });
+
+      // Start parsing the document
+      await parseDocument(fileUrl, selectedFile.type);
+      
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to upload file",
+      });
+    } finally {
+      setFileUploading(false);
+    }
+  };
+
+  const parseDocument = async (fileUrl: string, fileType: string) => {
+    setIsParsingFile(true);
+    setParsedContent("");
+    
+    try {
+      const response = await supabase.functions.invoke('parse-document', {
+        body: { fileUrl, fileType },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to parse document");
+      }
+
+      const result = response.data;
+      if (result.extractedText) {
+        setParsedContent(result.extractedText);
+        setContent(result.extractedText);
+        
+        toast({
+          title: "Success",
+          description: "Document parsed successfully",
+        });
+      } else {
+        throw new Error("Failed to extract text from document");
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to parse document",
+      });
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
   const handleAddKnowledge = async () => {
     if (isCommon) {
       // For common knowledge, we don't need a subject
@@ -126,13 +218,19 @@ export function KnowledgeBaseManager() {
     }
 
     try {
+      const fileInfo = selectedFile ? {
+        file_url: `${supabase.storageUrl}/object/public/knowledge_base_files/${Date.now()}_${selectedFile.name}`,
+        file_type: selectedFile.type
+      } : {};
+
       if (isEditing && editingId) {
         const { error } = await supabase
           .from('knowledge_base')
           .update({
             subject: isCommon ? "common" : selectedSubject,
             content: content.trim(),
-            is_common: isCommon
+            is_common: isCommon,
+            ...fileInfo
           })
           .eq('id', editingId);
 
@@ -148,7 +246,8 @@ export function KnowledgeBaseManager() {
           .insert({
             subject: isCommon ? "common" : selectedSubject,
             content: content.trim(),
-            is_common: isCommon
+            is_common: isCommon,
+            ...fileInfo
           });
 
         if (error) throw error;
@@ -183,6 +282,31 @@ export function KnowledgeBaseManager() {
 
   const handleDelete = async (id: string) => {
     try {
+      // First check if there's a file associated with this knowledge base entry
+      const { data, error: fetchError } = await supabase
+        .from('knowledge_base')
+        .select('file_url')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // If there's a file URL, delete the file from storage
+      if (data?.file_url) {
+        const filePath = data.file_url.split('/').pop();
+        if (filePath) {
+          const { error: storageError } = await supabase.storage
+            .from('knowledge_base_files')
+            .remove([filePath]);
+
+          if (storageError) {
+            console.error('Failed to delete file from storage:', storageError);
+            // Continue with deletion of database entry even if file deletion fails
+          }
+        }
+      }
+
+      // Delete the knowledge base entry
       const { error } = await supabase
         .from('knowledge_base')
         .delete()
@@ -212,6 +336,11 @@ export function KnowledgeBaseManager() {
     setIsEditing(false);
     setEditingId(null);
     setIsDialogOpen(false);
+    setSelectedFile(null);
+    setParsedContent("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   if (loading) {
@@ -240,10 +369,17 @@ export function KnowledgeBaseManager() {
                 <Card key={item.id} className="bg-muted">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-center">
-                      <CardTitle className="text-sm font-medium">
-                        {item.subject_name}
-                        {item.is_common && <span className="ml-2 text-primary">(Common)</span>}
-                      </CardTitle>
+                      <div className="flex flex-col">
+                        <CardTitle className="text-sm font-medium">
+                          {item.subject_name}
+                          {item.is_common && <span className="ml-2 text-primary">(Common)</span>}
+                        </CardTitle>
+                        {item.file_url && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Attached file: {item.file_url.split('/').pop()}
+                          </div>
+                        )}
+                      </div>
                       <div className="flex space-x-2">
                         <Button 
                           variant="ghost" 
@@ -314,6 +450,42 @@ export function KnowledgeBaseManager() {
                 </Select>
               </div>
             )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="file-upload">Upload Document (Optional)</Label>
+              <div className="flex items-center gap-2">
+                <Input 
+                  ref={fileInputRef}
+                  id="file-upload" 
+                  type="file" 
+                  onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+                />
+                <Button 
+                  type="button"
+                  onClick={handleFileUpload}
+                  disabled={!selectedFile || fileUploading}
+                  size="sm"
+                >
+                  {fileUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileUp className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              {selectedFile && (
+                <p className="text-xs text-muted-foreground">
+                  Selected file: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+                </p>
+              )}
+              {isParsingFile && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Parsing document content...</span>
+                </div>
+              )}
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="content">Content</Label>

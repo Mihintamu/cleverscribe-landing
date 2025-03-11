@@ -67,6 +67,8 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          file_type: string | null
+          file_url: string | null
           id: string
           is_common: boolean | null
           subject: string
@@ -75,6 +77,8 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           is_common?: boolean | null
           subject: string
@@ -83,6 +87,8 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           is_common?: boolean | null
           subject?: string
