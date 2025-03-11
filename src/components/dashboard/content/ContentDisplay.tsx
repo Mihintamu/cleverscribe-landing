@@ -42,6 +42,14 @@ export function ContentDisplay({
       `<em class="italic">${text}</em>`
     );
 
+    // Replace fractions (1/2, 3/4, etc.) with properly formatted fractions
+    formattedContent = formattedContent.replace(/(\d+)\/(\d+)/g, (match, numerator, denominator) => 
+      `<span class="inline-flex flex-col items-center justify-center mx-1">
+        <span class="border-b border-current">${numerator}</span>
+        <span>${denominator}</span>
+      </span>`
+    );
+
     // Replace bullet points
     formattedContent = formattedContent.replace(/^- (.*?)$/gm, (_, text) => 
       `<li class="ml-4">${text}</li>`

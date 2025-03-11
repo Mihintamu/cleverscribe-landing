@@ -1,40 +1,40 @@
 
 import { KnowledgeBaseItem } from "./KnowledgeBaseItem";
-
-type KnowledgeBase = {
-  id: string;
-  subject: string;
-  content: string;
-  is_common: boolean;
-  created_at: string;
-  subject_name?: string;
-  file_url?: string;
-  file_type?: string;
-};
+import { KnowledgeBase } from "./hooks/useKnowledgeBase";
 
 interface KnowledgeBaseListProps {
   items: KnowledgeBase[];
   onEdit: (item: KnowledgeBase) => void;
   onDelete: (id: string) => void;
+  isLoading?: boolean;
 }
 
-export function KnowledgeBaseList({ items, onEdit, onDelete }: KnowledgeBaseListProps) {
-  if (items.length === 0) {
+export function KnowledgeBaseList({ items, onEdit, onDelete, isLoading }: KnowledgeBaseListProps) {
+  if (isLoading) {
     return (
-      <p className="text-muted-foreground text-center py-4">
-        No knowledge base entries found. Create one to get started.
-      </p>
+      <div className="flex justify-center items-center py-8">
+        <p className="text-muted-foreground animate-pulse">Loading knowledge base...</p>
+      </div>
+    );
+  }
+
+  if (!items || items.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-muted-foreground">No knowledge base entries found.</p>
+        <p className="text-sm text-muted-foreground mt-2">Click 'Add Knowledge' to create one.</p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {items.map((item) => (
-        <KnowledgeBaseItem 
-          key={item.id} 
-          item={item} 
-          onEdit={onEdit} 
-          onDelete={onDelete} 
+        <KnowledgeBaseItem
+          key={item.id}
+          item={item}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>
