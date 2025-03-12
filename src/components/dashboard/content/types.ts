@@ -12,8 +12,6 @@ export type ContentType =
   | 'term_papers'
   | 'exam_notes';
 
-export type WordCountOption = 'short' | 'medium' | 'long';
-
 export interface WriteContentProps {
   userId: string;
 }
@@ -25,8 +23,8 @@ export interface ContentFormProps {
   setSubject: (value: string) => void;
   selectedSubjectId: string;
   setSelectedSubjectId: (value: string) => void;
-  wordCount: string;
-  setWordCount: (value: string) => void;
+  wordCount: number;
+  setWordCount: (value: number) => void;
   isGenerating: boolean;
   onGenerate: () => void;
 }

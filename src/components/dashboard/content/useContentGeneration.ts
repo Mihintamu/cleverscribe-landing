@@ -8,7 +8,7 @@ export function useContentGeneration(userId: string) {
   const [contentType, setContentType] = useState<ContentType>('essays');
   const [subject, setSubject] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
-  const [wordCount, setWordCount] = useState<number>(1500); // Default to medium (1500 words)
+  const [wordCount, setWordCount] = useState<number>(1500);
   const [generatedContent, setGeneratedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGeneratedBefore, setHasGeneratedBefore] = useState(false);

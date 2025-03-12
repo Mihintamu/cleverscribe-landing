@@ -1,7 +1,7 @@
 
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,12 +41,12 @@ export function Navbar({ isLoggedIn = false }: NavbarProps) {
     <nav className="border-b shadow-sm bg-white">
       <div className="container mx-auto px-4 max-w-6xl flex justify-between items-center h-16">
         <div className="flex items-center">
-          <a href="/" className="font-bold text-xl">ContentGenius</a>
+          <Link to="/" className="font-bold text-xl">ContentGenius</Link>
           
           <div className="hidden md:flex ml-10 space-x-4">
-            <a href="/#features" className="text-gray-600 hover:text-gray-900">Features</a>
-            <a href="/#pricing" className="text-gray-600 hover:text-gray-900">Pricing</a>
-            <a href="/#testimonials" className="text-gray-600 hover:text-gray-900">Testimonials</a>
+            <Link to="/#features" className="text-gray-600 hover:text-gray-900">Features</Link>
+            <Link to="/#pricing" className="text-gray-600 hover:text-gray-900">Pricing</Link>
+            <Link to="/#testimonials" className="text-gray-600 hover:text-gray-900">Testimonials</Link>
           </div>
         </div>
         

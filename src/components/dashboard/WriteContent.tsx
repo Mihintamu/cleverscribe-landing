@@ -33,20 +33,6 @@ export function WriteContent({ userId }: WriteContentProps) {
     });
   };
 
-  // Convert wordCount to string for ContentForm props
-  const wordCountString = wordCount === 750 ? "short" : wordCount === 1500 ? "medium" : "long";
-  
-  // Create a setter function that converts string to number
-  const handleWordCountChange = (value: string) => {
-    let numericValue = 1500; // medium is default
-    
-    if (value === "short") numericValue = 750;
-    else if (value === "medium") numericValue = 1500;
-    else if (value === "long") numericValue = 3000;
-    
-    setWordCount(numericValue);
-  };
-
   return (
     <div className="grid gap-8 md:grid-cols-[1fr_1fr]">
       <ContentForm
@@ -56,8 +42,8 @@ export function WriteContent({ userId }: WriteContentProps) {
         setSubject={setSubject}
         selectedSubjectId={selectedSubjectId}
         setSelectedSubjectId={setSelectedSubjectId}
-        wordCount={wordCountString}
-        setWordCount={handleWordCountChange}
+        wordCount={wordCount}
+        setWordCount={setWordCount}
         isGenerating={isGenerating}
         onGenerate={handleGenerate}
       />

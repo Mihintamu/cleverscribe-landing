@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -21,8 +22,8 @@ interface ContentFormProps {
   setSubject: (subject: string) => void;
   selectedSubjectId: string;
   setSelectedSubjectId: (subjectId: string) => void;
-  wordCount: string;
-  setWordCount: (wordCount: string) => void;
+  wordCount: number;
+  setWordCount: (wordCount: number) => void;
   isGenerating: boolean;
   onGenerate: () => void;
 }
@@ -48,7 +49,7 @@ export function ContentForm({
         const { data, error } = await supabase
           .from("subjects")
           .select("*")
-          .order("created_at", { ascending: false });
+          .order("name");
 
         if (error) {
           throw error;
@@ -89,9 +90,9 @@ export function ContentForm({
             onValueChange={(value) => setContentType(value as ContentType)}
           >
             <SelectTrigger id="content-type">
-              <SelectValue placeholder="Select" />
+              <SelectValue placeholder="Select content type" />
             </SelectTrigger>
-            <SelectContent className="max-h-[300px] bg-background">
+            <SelectContent className="max-h-[300px]">
               <SelectItem value="assignments">Assignments</SelectItem>
               <SelectItem value="reports">Reports</SelectItem>
               <SelectItem value="research_paper">Research Paper</SelectItem>
@@ -111,12 +112,12 @@ export function ContentForm({
           <Label htmlFor="subject-select">Subject</Label>
           <Select
             value={selectedSubjectId}
-            onValueChange={(value) => setSelectedSubjectId(value)}
+            onValueChange={setSelectedSubjectId}
           >
             <SelectTrigger id="subject-select">
-              <SelectValue placeholder="Select Subject" />
+              <SelectValue placeholder="Select a subject" />
             </SelectTrigger>
-            <SelectContent className="max-h-[300px] bg-background">
+            <SelectContent className="max-h-[300px]">
               {subjects.map((subject) => (
                 <SelectItem key={subject.id} value={subject.id}>
                   {subject.name}
@@ -126,18 +127,16 @@ export function ContentForm({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="word-count">Word Count</Label>
-          <Select value={wordCount} onValueChange={setWordCount}>
-            <SelectTrigger id="word-count">
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px] bg-background">
-              <SelectItem value="short">Short</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="long">Long</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="space-y-4">
+          <Label>Word Count: {wordCount}</Label>
+          <Slider
+            value={[wordCount]}
+            onValueChange={(value) => setWordCount(value[0])}
+            min={100}
+            max={2500}
+            step={100}
+            className="w-full"
+          />
         </div>
       </CardContent>
       <CardFooter>
