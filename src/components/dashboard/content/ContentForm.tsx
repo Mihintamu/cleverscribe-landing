@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -67,9 +67,21 @@ export function ContentForm({
     fetchSubjects();
   }, [toast]);
 
+  // Update subject text when subject ID changes
+  useEffect(() => {
+    if (selectedSubjectId) {
+      const selectedSubject = subjects.find(
+        (subject) => subject.id === selectedSubjectId
+      );
+      if (selectedSubject) {
+        setSubject(selectedSubject.name);
+      }
+    }
+  }, [selectedSubjectId, subjects, setSubject]);
+
   return (
     <Card>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         <div className="space-y-2">
           <Label htmlFor="content-type">Content Type</Label>
           <Select
@@ -79,7 +91,7 @@ export function ContentForm({
             <SelectTrigger id="content-type">
               <SelectValue placeholder="Select" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px] bg-background">
               <SelectItem value="assignments">Assignments</SelectItem>
               <SelectItem value="reports">Reports</SelectItem>
               <SelectItem value="research_paper">Research Paper</SelectItem>
@@ -96,17 +108,7 @@ export function ContentForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="subject">Subject</Label>
-          <Input
-            id="subject"
-            placeholder="Enter subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="subject-select">Or Select Subject</Label>
+          <Label htmlFor="subject-select">Subject</Label>
           <Select
             value={selectedSubjectId}
             onValueChange={(value) => setSelectedSubjectId(value)}
@@ -114,7 +116,7 @@ export function ContentForm({
             <SelectTrigger id="subject-select">
               <SelectValue placeholder="Select Subject" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px] bg-background">
               {subjects.map((subject) => (
                 <SelectItem key={subject.id} value={subject.id}>
                   {subject.name}
@@ -130,7 +132,7 @@ export function ContentForm({
             <SelectTrigger id="word-count">
               <SelectValue placeholder="Select" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px] bg-background">
               <SelectItem value="short">Short</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="long">Long</SelectItem>

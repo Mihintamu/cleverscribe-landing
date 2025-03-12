@@ -61,7 +61,7 @@ export function useKnowledgeBase() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      console.log("Knowledge base data fetched:", data);
+      console.log("Knowledge base data fetched:", data?.length || 0, "items");
       
       // Get subject names
       if (data && data.length > 0) {
@@ -81,11 +81,13 @@ export function useKnowledgeBase() {
           })
         );
         
-        console.log("Knowledge base with subject names:", withSubjectNames);
+        console.log("Knowledge base with subject names processed");
         setKnowledgeBase(withSubjectNames);
+        setFilteredKnowledgeBase(withSubjectNames);
       } else {
         console.log("No knowledge base entries found");
         setKnowledgeBase([]);
+        setFilteredKnowledgeBase([]);
       }
     } catch (error: any) {
       console.error("Error fetching knowledge base:", error);
@@ -94,6 +96,8 @@ export function useKnowledgeBase() {
         title: "Error",
         description: error.message || "Failed to fetch knowledge base",
       });
+      setKnowledgeBase([]);
+      setFilteredKnowledgeBase([]);
     } finally {
       setLoading(false);
     }
@@ -108,11 +112,11 @@ export function useKnowledgeBase() {
   // Apply filters when knowledgeBase, searchTerm, or subjectFilter changes
   useEffect(() => {
     console.log("Applying filters:", { searchTerm, subjectFilter });
-    applyFilters();
-  }, [knowledgeBase, searchTerm, subjectFilter]);
-
-  // Function to apply search and filter
-  const applyFilters = () => {
+    if (knowledgeBase.length === 0) {
+      setFilteredKnowledgeBase([]);
+      return;
+    }
+    
     let filtered = [...knowledgeBase];
     
     // Apply subject filter if selected
@@ -134,9 +138,9 @@ export function useKnowledgeBase() {
       });
     }
     
-    console.log("Filtered knowledge base:", filtered);
+    console.log("Filtered knowledge base:", filtered.length, "items");
     setFilteredKnowledgeBase(filtered);
-  };
+  }, [knowledgeBase, searchTerm, subjectFilter]);
 
   // Handle search and filter changes
   const handleSearch = (query: string, subject: string) => {

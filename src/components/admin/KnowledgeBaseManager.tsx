@@ -7,8 +7,10 @@ import { KnowledgeBaseList } from "./knowledge-base/KnowledgeBaseList";
 import { KnowledgeBaseForm } from "./knowledge-base/KnowledgeBaseForm";
 import { useKnowledgeBase } from "./knowledge-base/hooks/useKnowledgeBase";
 import { SearchBar } from "./knowledge-base/SearchBar";
+import { useToast } from "@/hooks/use-toast";
 
 export function KnowledgeBaseManager() {
+  const { toast } = useToast();
   const { 
     knowledgeBase, 
     subjects, 
@@ -25,7 +27,6 @@ export function KnowledgeBaseManager() {
 
   // Re-fetch knowledge base data when component mounts
   useEffect(() => {
-    console.log("KnowledgeBaseManager mounted, fetching data...");
     fetchKnowledgeBase();
   }, [fetchKnowledgeBase]);
 
@@ -39,8 +40,13 @@ export function KnowledgeBaseManager() {
     setEditingItem(null);
   };
 
-  console.log("KnowledgeBase data:", knowledgeBase);
-  console.log("Subjects data:", subjects);
+  const handleAddSuccess = () => {
+    toast({
+      title: "Success",
+      description: "Knowledge base entry added successfully!",
+    });
+    fetchKnowledgeBase();
+  };
 
   return (
     <div className="space-y-6">
@@ -61,20 +67,22 @@ export function KnowledgeBaseManager() {
             onSearch={handleSearch}
           />
           
-          <KnowledgeBaseList 
-            items={knowledgeBase}
-            onEdit={onEdit}
-            onDelete={handleDelete}
-            isLoading={loading}
-            searchTerm={searchTerm}
-          />
+          <div className="mt-6">
+            <KnowledgeBaseList 
+              items={knowledgeBase}
+              onEdit={onEdit}
+              onDelete={handleDelete}
+              isLoading={loading}
+              searchTerm={searchTerm}
+            />
+          </div>
         </CardContent>
       </Card>
 
       <KnowledgeBaseForm 
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
-        onSuccess={fetchKnowledgeBase}
+        onSuccess={handleAddSuccess}
         subjects={subjects}
         editItem={editingItem}
       />
