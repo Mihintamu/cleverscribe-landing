@@ -63,24 +63,39 @@ export default function Auth() {
 
     try {
       if (isLogin) {
+        // Log detailed info for debugging
+        console.log("Attempting to sign in with:", { email });
+        
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         
         if (error) {
-          if (error.message.includes("Invalid login credentials")) {
-            throw new Error("Invalid email or password. Please try again.");
-          }
-          throw error;
+          console.error("Login error:", error);
+          toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: error.message || "Invalid email or password. Please try again.",
+          });
+          setLoading(false);
+          return;
         }
 
-        if (data.session) {
+        if (data?.session) {
+          console.log("Login successful, session:", data.session);
           toast({
             title: "Login Successful",
             description: "Welcome back!",
           });
           navigate("/dashboard");
+        } else {
+          console.warn("No session returned after login");
+          toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: "Could not create a session. Please try again.",
+          });
         }
       } else {
         // Check if user exists before signup
@@ -94,7 +109,7 @@ export default function Auth() {
           throw new Error("An account with this email already exists. Please sign in instead.");
         }
 
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -104,17 +119,29 @@ export default function Auth() {
           },
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error("Signup error:", error);
+          throw error;
+        }
 
-        toast({
-          title: "Success!",
-          description: "Account created successfully. Please check your email for verification.",
-        });
-        
-        // Switch to login view after successful signup
-        setIsLogin(true);
+        if (data?.user) {
+          console.log("Signup successful:", data);
+          toast({
+            title: "Success!",
+            description: "Account created successfully. Please check your email for verification.",
+          });
+          // Switch to login view after successful signup
+          setIsLogin(true);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Signup Failed",
+            description: "Could not create your account. Please try again.",
+          });
+        }
       }
     } catch (error: any) {
+      console.error("Auth error:", error);
       toast({
         variant: "destructive",
         title: "Error",
