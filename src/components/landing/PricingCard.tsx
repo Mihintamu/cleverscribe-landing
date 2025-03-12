@@ -72,12 +72,29 @@ export function PricingCard({
             // Calculate credits based on plan name
             const credits = name === 'Free' ? 1 : name === 'Basic' ? 8 : 30;
             
+            // Get plan_id based on plan name
+            let planId: number;
+            switch(name.toLowerCase()) {
+              case 'free':
+                planId = 1;
+                break;
+              case 'basic':
+                planId = 2;
+                break;
+              case 'premium':
+                planId = 3;
+                break;
+              default:
+                planId = 1; // Default to free plan if unknown
+            }
+            
             // Save payment information to database
             const { error: subscriptionError } = await supabase
               .from('user_subscriptions')
               .upsert({
                 user_id: data.session?.user.id,
                 plan_name: name.toLowerCase(),
+                plan_id: planId, // Add required plan_id
                 payment_id: response.razorpay_payment_id,
                 payment_method: 'razorpay',
                 amount: price,
