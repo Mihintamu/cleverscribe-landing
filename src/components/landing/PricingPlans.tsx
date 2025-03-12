@@ -12,14 +12,14 @@ export function PricingPlans() {
     },
     {
       name: "Basic",
-      price: 50,
+      price: 499,
       description: "For regular users",
       features: ["8 content generations", "All features included"],
       animationDelay: "600ms"
     },
     {
       name: "Premium",
-      price: 250,
+      price: 2499,
       description: "For power users",
       features: ["30 content generations", "Priority support", "Advanced features"],
       isPopular: true,

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +10,7 @@ import { FormSubjectSelector } from "./FormSubjectSelector";
 import { ContentInput } from "./ContentInput";
 import { FormActions } from "./FormActions";
 import { uploadFile } from "./utils";
+import { useKnowledgeBaseForm } from "./hooks/useKnowledgeBaseForm";
 
 type Subject = {
   id: string;
@@ -41,13 +43,29 @@ export function KnowledgeBaseForm({
   subjects,
   editItem
 }: KnowledgeBaseFormProps) {
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
-  const [content, setContent] = useState("");
-  const [isCommon, setIsCommon] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [hasFile, setHasFile] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+  
+  const {
+    selectedSubject,
+    setSelectedSubject,
+    content,
+    setContent,
+    isCommon,
+    setIsCommon,
+    selectedFile,
+    setSelectedFile,
+    hasFile,
+    setHasFile,
+    isUploading,
+    setIsUploading,
+    resetForm,
+    handleSubmit
+  } = useKnowledgeBaseForm({
+    editItem,
+    onSuccess,
+    onClose,
+    toast
+  });
 
   useEffect(() => {
     if (isOpen && editItem) {
@@ -58,13 +76,9 @@ export function KnowledgeBaseForm({
         setSelectedSubject(editItem.subject);
       }
     } else if (isOpen) {
-      setSelectedSubject("");
-      setContent("");
-      setIsCommon(false);
-      setSelectedFile(null);
-      setHasFile(false);
+      resetForm();
     }
-  }, [isOpen, editItem]);
+  }, [isOpen, editItem, resetForm, setIsCommon, setContent, setHasFile, setSelectedSubject]);
 
   const handleContentParsed = (parsedContent: string) => {
     setContent(parsedContent);
@@ -73,116 +87,6 @@ export function KnowledgeBaseForm({
   const handleFileSelected = (file: File | null) => {
     setSelectedFile(file);
     setHasFile(!!file);
-  };
-
-  const handleSubmit = async () => {
-    if (isCommon) {
-      if (!content.trim() && !hasFile && !selectedFile) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Please provide either content or upload a file",
-        });
-        return;
-      }
-    } else {
-      if (!selectedSubject) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Please select a subject",
-        });
-        return;
-      }
-      
-      if (!content.trim() && !hasFile && !selectedFile) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Please provide either content or upload a file",
-        });
-        return;
-      }
-    }
-
-    setIsUploading(true);
-
-    try {
-      let fileInfo = {};
-      
-      if (selectedFile) {
-        await new Promise<void>((resolve, reject) => {
-          uploadFile(
-            selectedFile,
-            (fileUrl) => {
-              fileInfo = {
-                file_url: fileUrl,
-                file_type: selectedFile.type
-              };
-              resolve();
-            },
-            (errorMessage) => {
-              reject(new Error(errorMessage));
-            },
-            () => {},
-            () => {}
-          );
-        });
-      }
-
-      if (editItem?.file_url && !selectedFile) {
-        fileInfo = {
-          file_url: editItem.file_url,
-          file_type: editItem.file_type
-        };
-      }
-
-      if (editItem) {
-        const { error } = await supabase
-          .from('knowledge_base')
-          .update({
-            subject: isCommon ? "common" : selectedSubject,
-            content: content.trim(),
-            is_common: isCommon,
-            ...fileInfo
-          })
-          .eq('id', editItem.id);
-
-        if (error) throw error;
-        
-        toast({
-          title: "Success",
-          description: "Knowledge base entry updated successfully",
-        });
-      } else {
-        const { error } = await supabase
-          .from('knowledge_base')
-          .insert({
-            subject: isCommon ? "common" : selectedSubject,
-            content: content.trim(),
-            is_common: isCommon,
-            ...fileInfo
-          });
-
-        if (error) throw error;
-        
-        toast({
-          title: "Success",
-          description: "Knowledge base entry added successfully",
-        });
-      }
-      
-      onSuccess();
-      onClose();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to save knowledge base entry",
-      });
-    } finally {
-      setIsUploading(false);
-    }
   };
 
   return (
@@ -213,7 +117,7 @@ export function KnowledgeBaseForm({
         
         <FormActions 
           onClose={onClose} 
-          onSubmit={handleSubmit} 
+          onSubmit={() => handleSubmit(subjects, uploadFile, selectedFile)}
           isUploading={isUploading}
           isEditing={!!editItem}
         />

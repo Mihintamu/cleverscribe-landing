@@ -1,6 +1,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { initializeRazorpayPayment } from "@/integrations/razorpay/client";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PricingCardProps {
   name: string;
@@ -19,6 +23,98 @@ export function PricingCard({
   isPopular, 
   animationDelay 
 }: PricingCardProps) {
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const session = supabase.auth.getSession();
+
+  const handleSubscribe = async () => {
+    if (!price) {
+      toast({
+        title: "Free Plan",
+        description: "You can start using the free plan right away!",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Get session to check if user is logged in
+      const { data } = await session;
+      
+      if (!data.session) {
+        toast({
+          variant: "destructive",
+          title: "Login Required",
+          description: "Please login to subscribe to a plan",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Fetch Razorpay Key ID from Supabase secrets
+      const { data: secretData, error: secretError } = await supabase.functions.invoke('get-razorpay-key', {
+        body: { key: 'RAZORPAY_KEY_ID' },
+      });
+
+      if (secretError || !secretData?.keyId) {
+        throw new Error("Failed to retrieve payment information");
+      }
+
+      // Initialize Razorpay payment
+      initializeRazorpayPayment({
+        amount: price,
+        planName: name,
+        description: `Subscription for ${name} plan`,
+        keyId: secretData.keyId,
+        onSuccess: async (response) => {
+          // Save payment information to database
+          const { error: subscriptionError } = await supabase
+            .from('user_subscriptions')
+            .upsert({
+              user_id: data.session?.user.id,
+              plan_id: name.toLowerCase(),
+              payment_id: response.razorpay_payment_id,
+              payment_method: 'razorpay',
+              amount: price,
+              status: 'completed'
+            });
+
+          if (subscriptionError) {
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Payment was successful but we couldn't update your subscription. Please contact support.",
+            });
+          } else {
+            toast({
+              title: "Success",
+              description: `You've successfully subscribed to the ${name} plan!`,
+            });
+          }
+          setLoading(false);
+        },
+        onError: (error) => {
+          console.error("Razorpay error:", error);
+          toast({
+            variant: "destructive",
+            title: "Payment Failed",
+            description: "Unable to process your payment. Please try again.",
+          });
+          setLoading(false);
+        }
+      });
+    } catch (error: any) {
+      console.error("Subscription error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "An error occurred while processing your subscription",
+      });
+      setLoading(false);
+    }
+  };
+
   return (
     <div className={`rounded-xl border ${isPopular ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground'} shadow${isPopular ? '-lg' : ''} p-6 relative animate-fade-up`} style={{ animationDelay }}>
       {isPopular && (
@@ -46,8 +142,10 @@ export function PricingCard({
       <Button 
         variant={isPopular ? "secondary" : "default"} 
         className="mt-6 w-full"
+        onClick={handleSubscribe}
+        disabled={loading}
       >
-        Choose {name}
+        {loading ? "Processing..." : `Choose ${name}`}
       </Button>
     </div>
   );
