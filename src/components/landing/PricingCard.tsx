@@ -25,7 +25,6 @@ export function PricingCard({
 }: PricingCardProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const session = supabase.auth.getSession();
 
   const handleSubscribe = async () => {
     if (!price) {
@@ -40,7 +39,7 @@ export function PricingCard({
 
     try {
       // Get session to check if user is logged in
-      const { data } = await session;
+      const { data } = await supabase.auth.getSession();
       
       if (!data.session) {
         toast({
@@ -73,14 +72,16 @@ export function PricingCard({
             .from('user_subscriptions')
             .upsert({
               user_id: data.session?.user.id,
-              plan_id: name.toLowerCase(),
+              plan_name: name.toLowerCase(),
               payment_id: response.razorpay_payment_id,
               payment_method: 'razorpay',
               amount: price,
-              status: 'completed'
+              status: 'completed',
+              credits_remaining: name === 'Free' ? 1 : name === 'Basic' ? 8 : 30
             });
 
           if (subscriptionError) {
+            console.error("Subscription error:", subscriptionError);
             toast({
               variant: "destructive",
               title: "Error",
