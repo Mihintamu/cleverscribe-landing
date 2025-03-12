@@ -27,6 +27,36 @@ export default function Auth() {
     checkSession();
   }, [navigate]);
 
+  const handleDemoLogin = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: "demo@example.com",
+        password: "demo123",
+      });
+      
+      if (error) throw error;
+      
+      if (data.session) {
+        toast({
+          title: "Demo Login Successful",
+          description: "Welcome to the demo account!",
+        });
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Demo Login Failed",
+        description: error.message || "Failed to login with demo account",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -46,6 +76,10 @@ export default function Auth() {
         }
 
         if (data.session) {
+          toast({
+            title: "Login Successful",
+            description: "Welcome back!",
+          });
           navigate("/dashboard");
         }
       } else {
@@ -140,6 +174,18 @@ export default function Auth() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}
           </Button>
+          
+          {isLogin && (
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full mt-2" 
+              onClick={handleDemoLogin}
+              disabled={loading}
+            >
+              Try Demo Account
+            </Button>
+          )}
         </form>
 
         <div className="text-center">
