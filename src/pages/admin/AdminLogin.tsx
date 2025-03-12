@@ -21,6 +21,7 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
+      console.log("Starting admin login process");
       // Step 1: Verify the access code
       const { data: accessCodes, error: codeError } = await supabase
         .from('admin_access_codes')
@@ -29,20 +30,26 @@ export default function AdminLogin() {
         .single();
 
       if (codeError || !accessCodes) {
+        console.error("Invalid access code:", codeError);
         throw new Error("Invalid admin access code");
       }
 
-      // Step 2: Check if user exists and sign in
+      console.log("Access code verified, attempting login");
+      
+      // Step 2: Try to sign in directly
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        // If login failed because user doesn't exist, we create them
+        console.log("Sign in error:", error.message);
+        
+        // If user doesn't exist or invalid credentials, sign up
         if (error.message.includes("Invalid login credentials")) {
-          // Create user account
-          const { error: signUpError } = await supabase.auth.signUp({
+          console.log("Attempting to create admin account");
+          // Create admin account
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
             options: {
@@ -51,23 +58,29 @@ export default function AdminLogin() {
           });
 
           if (signUpError) {
-            throw new Error(signUpError.message || "Failed to create admin account");
-          }
+            // If error is about user already existing, try to sign in again
+            if (signUpError.message.includes("User already registered")) {
+              console.log("User already exists, retrying login with provided password");
+              const { error: finalSignInError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
 
-          // Try to sign in again
-          const { error: finalSignInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-
-          if (finalSignInError) {
-            throw new Error(finalSignInError.message || "Failed to sign in with admin account");
+              if (finalSignInError) {
+                console.error("Final sign in attempt failed:", finalSignInError);
+                throw new Error("Incorrect password for existing admin account");
+              }
+            } else {
+              console.error("Sign up error:", signUpError);
+              throw new Error(signUpError.message || "Failed to create admin account");
+            }
           }
         } else {
           throw new Error(error.message || "Invalid email or password");
         }
       }
 
+      console.log("Admin login successful");
       toast({
         title: "Success!",
         description: "Admin login successful",

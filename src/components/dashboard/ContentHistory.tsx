@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Download, Eye, Calendar } from "lucide-react";
 import { format } from "date-fns";
-import { ContentType, WordCountOption } from "./WriteContent";
+import { ContentType, WordCountOption } from "./content/types";
 
 interface HistoryItem {
   id: string;

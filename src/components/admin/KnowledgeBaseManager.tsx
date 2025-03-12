@@ -23,6 +23,12 @@ export function KnowledgeBaseManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
+  // Re-fetch knowledge base data when component mounts
+  useEffect(() => {
+    console.log("KnowledgeBaseManager mounted, fetching data...");
+    fetchKnowledgeBase();
+  }, [fetchKnowledgeBase]);
+
   const onEdit = (item) => {
     setEditingItem(item);
     setIsDialogOpen(true);
@@ -32,6 +38,9 @@ export function KnowledgeBaseManager() {
     setIsDialogOpen(false);
     setEditingItem(null);
   };
+
+  console.log("KnowledgeBase data:", knowledgeBase);
+  console.log("Subjects data:", subjects);
 
   return (
     <div className="space-y-6">

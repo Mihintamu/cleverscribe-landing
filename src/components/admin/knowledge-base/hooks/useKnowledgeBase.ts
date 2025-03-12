@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,42 +28,40 @@ export function useKnowledgeBase() {
   const [subjectFilter, setSubjectFilter] = useState("");
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchSubjects();
-    fetchKnowledgeBase();
-  }, []);
-
-  // Apply filters when knowledgeBase, searchTerm, or subjectFilter changes
-  useEffect(() => {
-    applyFilters();
-  }, [knowledgeBase, searchTerm, subjectFilter]);
-
-  const fetchSubjects = async () => {
+  // Fetch subjects function
+  const fetchSubjects = useCallback(async () => {
     try {
+      console.log("Fetching subjects...");
       const { data, error } = await supabase
         .from('subjects')
         .select('*')
         .order('name');
 
       if (error) throw error;
+      console.log("Subjects fetched:", data);
       setSubjects(data || []);
     } catch (error: any) {
+      console.error("Error fetching subjects:", error);
       toast({
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to fetch subjects",
       });
     }
-  };
+  }, [toast]);
 
-  const fetchKnowledgeBase = async () => {
+  // Fetch knowledge base function
+  const fetchKnowledgeBase = useCallback(async () => {
+    setLoading(true);
     try {
+      console.log("Fetching knowledge base...");
       const { data, error } = await supabase
         .from('knowledge_base')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log("Knowledge base data fetched:", data);
       
       // Get subject names
       if (data && data.length > 0) {
@@ -83,11 +81,14 @@ export function useKnowledgeBase() {
           })
         );
         
+        console.log("Knowledge base with subject names:", withSubjectNames);
         setKnowledgeBase(withSubjectNames);
       } else {
+        console.log("No knowledge base entries found");
         setKnowledgeBase([]);
       }
     } catch (error: any) {
+      console.error("Error fetching knowledge base:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -96,7 +97,19 @@ export function useKnowledgeBase() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    console.log("useKnowledgeBase hook initialized");
+    fetchSubjects();
+    fetchKnowledgeBase();
+  }, [fetchSubjects, fetchKnowledgeBase]);
+
+  // Apply filters when knowledgeBase, searchTerm, or subjectFilter changes
+  useEffect(() => {
+    console.log("Applying filters:", { searchTerm, subjectFilter });
+    applyFilters();
+  }, [knowledgeBase, searchTerm, subjectFilter]);
 
   // Function to apply search and filter
   const applyFilters = () => {
@@ -121,11 +134,13 @@ export function useKnowledgeBase() {
       });
     }
     
+    console.log("Filtered knowledge base:", filtered);
     setFilteredKnowledgeBase(filtered);
   };
 
   // Handle search and filter changes
   const handleSearch = (query: string, subject: string) => {
+    console.log("Search parameters:", { query, subject });
     setSearchTerm(query);
     setSubjectFilter(subject);
   };
