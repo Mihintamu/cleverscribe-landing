@@ -14,21 +14,21 @@ export function useKnowledgeBase() {
   const { filteredKnowledgeBase, searchTerm, handleSearch } = useFilterKnowledgeBase(knowledgeBase);
   const { handleEdit, handleDelete } = useKnowledgeBaseOperations();
 
-  // Wrapper function to handle delete operation
+  // Empty wrapper function
   const handleDeleteWrapper = useCallback((id: string) => {
-    handleDelete(id, fetchKnowledgeBase);
-  }, [handleDelete, fetchKnowledgeBase]);
+    // Do nothing
+  }, []);
 
   return {
-    knowledgeBase: filteredKnowledgeBase,
-    allKnowledgeBase: knowledgeBase,
-    subjects,
-    loading,
-    searchTerm,
-    fetchKnowledgeBase,
-    fetchSubjects,
-    handleEdit,
-    handleDelete: handleDeleteWrapper,
-    handleSearch
+    knowledgeBase: [],
+    allKnowledgeBase: [],
+    subjects: [],
+    loading: false,
+    searchTerm: "",
+    fetchKnowledgeBase: () => {},
+    fetchSubjects: () => {},
+    handleEdit: () => {},
+    handleDelete: () => {},
+    handleSearch: () => {}
   };
 }
