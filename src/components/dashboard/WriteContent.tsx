@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ContentForm } from "./content/ContentForm";
@@ -31,7 +31,28 @@ export function WriteContent({ userId }: WriteContentProps) {
   const [wordCount, setWordCount] = useState(1000);
   const [generatedContent, setGeneratedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hasGeneratedBefore, setHasGeneratedBefore] = useState(false);
   const { toast } = useToast();
+
+  // Check if user has already generated content on component mount
+  useEffect(() => {
+    const checkPreviousGenerations = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('generated_content')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        
+        if (error) throw error;
+        
+        setHasGeneratedBefore(!!count && count > 0);
+      } catch (error) {
+        console.error("Error checking previous generations:", error);
+      }
+    };
+    
+    checkPreviousGenerations();
+  }, [userId]);
 
   const handleGenerate = async () => {
     if (!subject || !selectedSubjectId) {
@@ -49,12 +70,23 @@ export function WriteContent({ userId }: WriteContentProps) {
       // Check if user has enough credits
       const { data: subscriptionData, error: subscriptionError } = await supabase
         .from('user_subscriptions')
-        .select('*')
+        .select('*, subscription_plans(*)')
         .eq('user_id', userId)
         .single();
       
       if (subscriptionError) {
         throw new Error("Could not verify subscription status");
+      }
+      
+      // Check if this is a free plan user who has already generated content
+      if (subscriptionData.subscription_plans.name.toLowerCase() === 'free' && hasGeneratedBefore) {
+        toast({
+          variant: "destructive",
+          title: "Free Plan Limit Reached",
+          description: "You've reached the limit for the free plan. Please upgrade to generate more content."
+        });
+        setIsGenerating(false);
+        return;
       }
       
       if (subscriptionData.credits_remaining < 1) {
@@ -63,6 +95,7 @@ export function WriteContent({ userId }: WriteContentProps) {
           title: "Insufficient Credits",
           description: "You don't have enough credits. Please upgrade your plan to continue."
         });
+        setIsGenerating(false);
         return;
       }
 
@@ -114,6 +147,9 @@ export function WriteContent({ userId }: WriteContentProps) {
       if (updateError) {
         throw new Error("Failed to update credits");
       }
+
+      // Update the hasGeneratedBefore state
+      setHasGeneratedBefore(true);
 
       toast({
         title: "Content Generated",

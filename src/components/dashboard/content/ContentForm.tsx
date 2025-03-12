@@ -15,6 +15,7 @@ import { ContentType } from "../WriteContent";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ContentFormProps {
   contentType: ContentType;
@@ -43,6 +44,7 @@ export function ContentForm({
 }: ContentFormProps) {
   const [subjectOptions, setSubjectOptions] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   
   const contentTypes: ContentType[] = [
     'assignments', 
@@ -67,8 +69,29 @@ export function ContentForm({
           .select('id, name')
           .order('name');
         
-        if (error) throw error;
-        setSubjectOptions(data || []);
+        if (error) {
+          console.error("Error fetching subjects:", error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load subjects. Please try again later."
+          });
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          setSubjectOptions(data);
+          // Set the first subject as default if none is selected
+          if (!selectedSubjectId) {
+            setSelectedSubjectId(data[0].id);
+          }
+        } else {
+          toast({
+            variant: "destructive",
+            title: "No Subjects Found",
+            description: "There are no subjects available. Please contact support."
+          });
+        }
       } catch (error) {
         console.error('Error fetching subjects:', error);
       } finally {

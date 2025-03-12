@@ -8,11 +8,14 @@ import { UserAnalytics } from "@/components/admin/UserAnalytics";
 import { SalesAnalytics } from "@/components/admin/SalesAnalytics";
 import { SubjectManager } from "@/components/admin/SubjectManager";
 import { KnowledgeBaseManager } from "@/components/admin/KnowledgeBaseManager";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedTab, setSelectedTab] = useState('users');
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -35,6 +38,10 @@ export default function AdminDashboard() {
 
     checkAdminStatus();
   }, [navigate]);
+
+  const handleTabChange = (value: string) => {
+    setSelectedTab(value);
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -60,7 +67,7 @@ export default function AdminDashboard() {
         <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
       </div>
       
-      <Tabs defaultValue="users" className="w-full">
+      <Tabs value={selectedTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-8">
           <TabsTrigger value="users">User Analytics</TabsTrigger>
           <TabsTrigger value="sales">Sales Analytics</TabsTrigger>

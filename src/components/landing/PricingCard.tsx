@@ -26,6 +26,12 @@ export function PricingCard({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Function to format price display
+  const formatPrice = (price: number) => {
+    if (price === 0) return "Free";
+    return `₹${price}`;
+  };
+
   const handleSubscribe = async () => {
     if (!price) {
       toast({
@@ -161,7 +167,7 @@ export function PricingCard({
         </p>
       </div>
       <div className="mt-6 mb-4">
-        <span className="text-4xl font-bold">₹{price}</span>
+        <span className="text-4xl font-bold">{formatPrice(price)}</span>
       </div>
       <ul className="mt-4 space-y-3 text-sm">
         {features.map((feature, index) => (

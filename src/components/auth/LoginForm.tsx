@@ -18,36 +18,6 @@ export function LoginForm({ setIsLogin }: LoginFormProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleDemoLogin = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: "demo@example.com",
-        password: "demo123",
-      });
-      
-      if (error) throw error;
-      
-      if (data.session) {
-        toast({
-          title: "Demo Login Successful",
-          description: "Welcome to the demo account!",
-        });
-        navigate("/dashboard");
-      }
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Demo Login Failed",
-        description: error.message || "Failed to login with demo account",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -126,16 +96,6 @@ export function LoginForm({ setIsLogin }: LoginFormProps) {
 
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Loading..." : "Sign In"}
-        </Button>
-        
-        <Button 
-          type="button" 
-          variant="outline" 
-          className="w-full mt-2" 
-          onClick={handleDemoLogin}
-          disabled={loading}
-        >
-          Try Demo Account
         </Button>
       </form>
 
