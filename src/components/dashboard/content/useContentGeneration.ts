@@ -8,7 +8,7 @@ export function useContentGeneration(userId: string) {
   const [contentType, setContentType] = useState<ContentType>('essays');
   const [subject, setSubject] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
-  const [wordCount, setWordCount] = useState(1000);
+  const [wordCount, setWordCount] = useState<number>(1500); // Default to medium (1500 words)
   const [generatedContent, setGeneratedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGeneratedBefore, setHasGeneratedBefore] = useState(false);
@@ -114,12 +114,15 @@ export function useContentGeneration(userId: string) {
       let dbContentType: "assignments" | "reports" | "research_paper" | "essays" | "thesis" | "presentation" | "case_studies" | "book_review" | "article_reviews" | "term_papers" = 
         contentType === 'exam_notes' ? 'term_papers' : contentType as any;
       
+      // Get word count option for database
+      const wordCountOption = wordCount <= 750 ? 'short' : wordCount <= 1500 ? 'medium' : 'long';
+      
       // Save to database
       console.log("Saving to database:", {
         user_id: userId,
         content_type: dbContentType,
         subject,
-        word_count_option: wordCount <= 750 ? 'short' : wordCount <= 1500 ? 'medium' : 'long',
+        word_count_option: wordCountOption,
         target_word_count: wordCount,
       });
       
@@ -129,7 +132,7 @@ export function useContentGeneration(userId: string) {
           user_id: userId,
           content_type: dbContentType,
           subject,
-          word_count_option: wordCount <= 750 ? 'short' : wordCount <= 1500 ? 'medium' : 'long',
+          word_count_option: wordCountOption,
           target_word_count: wordCount,
           generated_text: generatedText
         });
