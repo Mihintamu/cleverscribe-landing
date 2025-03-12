@@ -107,12 +107,12 @@ export function useContentGeneration(userId: string) {
   const saveGeneratedContent = async (text: string) => {
     try {
       const { error } = await supabase.from("generated_content").insert({
-        user_id: userId,
         content_type: contentType,
         subject,
         generated_text: text,
         target_word_count: wordCount,
         word_count_option: formatWords(wordCount),
+        user_id: userId
       });
       
       if (error) {

@@ -9,8 +9,7 @@ export type ContentType =
   | 'case_studies'
   | 'book_review'
   | 'article_reviews'
-  | 'term_papers'
-  | 'exam_notes';
+  | 'term_papers';
 
 export type WordCountOption = 'short' | 'medium' | 'long';
 
