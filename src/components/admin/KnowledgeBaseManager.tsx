@@ -58,13 +58,10 @@ export function KnowledgeBaseManager() {
 
       if (subjectsError) throw subjectsError;
       
-      // Fetch knowledge base
+      // Fetch knowledge base with a modified approach to handle subjects
       const { data: kbData, error: kbError } = await supabase
         .from("knowledge_base")
-        .select(`
-          *,
-          subjects:subject (name)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (kbError) throw kbError;
@@ -72,10 +69,16 @@ export function KnowledgeBaseManager() {
       console.log("Fetched subjects:", subjectsData);
       console.log("Fetched knowledge base:", kbData);
       
-      // Format the data to handle the join
-      const formattedKbData = kbData.map((item) => ({
+      // Create a lookup for subject names
+      const subjectLookup = new Map();
+      subjectsData?.forEach(subject => {
+        subjectLookup.set(subject.id, subject.name);
+      });
+      
+      // Format the data to handle the subject names
+      const formattedKbData = kbData?.map((item) => ({
         ...item,
-        subject_name: item.is_common ? "Common" : item.subjects?.name || "Unknown"
+        subject_name: item.is_common ? "Common" : subjectLookup.get(item.subject) || "Unknown"
       }));
 
       setSubjects(subjectsData || []);

@@ -101,13 +101,16 @@ export function useContentGeneration(userId: string) {
       if (data.content) {
         setGeneratedContent(data.content);
         
-        // Save to history
+        // Save to history - fix type issues here
+        const wordCountOption = wordCount <= 300 ? "short" : wordCount <= 1000 ? "medium" : "long";
+        
         await supabase.from("generated_content").insert({
           user_id: userId,
           content_type: contentType,
           subject,
-          word_count: wordCount,
-          content: data.content
+          target_word_count: wordCount,
+          word_count_option: wordCountOption,
+          generated_text: data.content
         });
       } else {
         throw new Error("No content was generated");

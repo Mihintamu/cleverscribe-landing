@@ -1,145 +1,127 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { corsHeaders } from '../_shared/cors.ts'
 
-interface RequestBody {
-  contentType: string;
-  subject: string;
-  wordCount: string;
-  knowledgeBase?: string;
-}
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || ''
 
-function createPrompt(contentType: string, subject: string, wordCount: string, knowledgeBase: string): string {
-  // Content type formats
-  const contentFormats = {
-    essays: "Write a well-structured essay with introduction, body paragraphs, and conclusion",
-    research_paper: "Write a research paper with abstract, introduction, methodology, results, discussion, and conclusion",
-    assignments: "Write a comprehensive assignment that demonstrates understanding of the topic",
-    reports: "Write a detailed report with executive summary, findings, analysis, and recommendations",
-    thesis: "Write a thesis with clear arguments, evidence, and scholarly analysis",
-    presentation: "Write presentation content with clear slides, talking points, and visual descriptions",
-    case_studies: "Write a case study with background, analysis, alternatives, recommendations, and implementation",
-    book_review: "Write a book review with summary, analysis, evaluation, and conclusion",
-    article_reviews: "Write an article review with summary, critique, and implications",
-    term_papers: "Write a term paper with comprehensive research, analysis, and conclusions",
-  };
-
-  // Word count mapping
-  const wordCounts = {
-    short: "around 300-500 words",
-    medium: "around 800-1000 words",
-    long: "around 1500-2000 words",
-  };
-
-  const format = contentFormats[contentType as keyof typeof contentFormats] || 
-    "Write comprehensive content";
-  
-  const length = wordCounts[wordCount as keyof typeof wordCounts] || 
-    "around 800 words";
-
-  let prompt = `${format} about "${subject}", ${length}.`;
-  
-  // Add knowledge base context if available
-  if (knowledgeBase && knowledgeBase.trim()) {
-    prompt += `\n\nUse the following information as reference:\n${knowledgeBase}`;
-  }
-  
-  prompt += "\n\nMake sure the content is well-structured, engaging, and academically sound.";
-  
-  return prompt;
-}
-
-async function generateContent(prompt: string): Promise<string> {
-  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-  
-  if (!OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set");
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
   
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    // Get request body
+    const { contentType, subject, wordCount, knowledgeBase } = await req.json()
+    
+    if (!contentType || !subject) {
+      return new Response(
+        JSON.stringify({ error: 'Content type and subject are required' }),
+        { 
+          status: 400, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      )
+    }
+    
+    if (!OPENAI_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key not configured' }),
+        { 
+          status: 500, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      )
+    }
+    
+    // Format content type for prompt
+    const formattedContentType = contentType.replace(/_/g, ' ')
+    
+    // Create system and user prompts
+    const systemPrompt = `You are an expert academic content creator specializing in creating high-quality ${formattedContentType}. Your task is to create content that is:
+    1. Well-structured and organized
+    2. Academically sound with proper reasoning
+    3. Contains valid arguments and supporting evidence
+    4. Uses a formal tone appropriate for academic writing
+    5. Approximately ${wordCount} words in length`
+    
+    // Add knowledge base context if available
+    const knowledgeBaseContext = knowledgeBase 
+      ? `\n\nUse the following knowledge base information when creating the content:\n${knowledgeBase}`
+      : ''
+    
+    const userPrompt = `Please create a ${formattedContentType} on the subject of ${subject}. The content should be approximately ${wordCount} words in length.${knowledgeBaseContext}`
+    
+    // Call OpenAI API
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: 'gpt-4', // Using GPT-4 for high-quality academic content
         messages: [
           {
-            role: "system",
-            content: "You are a professional academic content creator that produces well-researched, properly formatted content."
+            role: 'system',
+            content: systemPrompt
           },
           {
-            role: "user",
-            content: prompt
+            role: 'user',
+            content: userPrompt
           }
         ],
         temperature: 0.7,
-        max_tokens: 2500,
-      }),
-    });
+        max_tokens: 4000
+      })
+    })
     
-    const data = await response.json();
-    
-    if (data.error) {
-      console.error("OpenAI API error:", data.error);
-      throw new Error(data.error.message || "Failed to generate content");
-    }
-    
-    if (!data.choices || data.choices.length === 0) {
-      throw new Error("No content was generated");
-    }
-    
-    return data.choices[0].message.content.trim();
-  } catch (error) {
-    console.error("Error calling OpenAI:", error);
-    throw error;
-  }
-}
-
-serve(async (req) => {
-  // Handle CORS
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-  
-  try {
-    const requestData: RequestBody = await req.json();
-    const { contentType, subject, wordCount, knowledgeBase = "" } = requestData;
-    
-    if (!contentType || !subject || !wordCount) {
+    if (!openAIResponse.ok) {
+      const errorData = await openAIResponse.json()
+      console.error('OpenAI API error:', errorData)
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: `OpenAI API error: ${errorData.error?.message || 'Unknown error'}` }),
         { 
-          status: 400, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          status: openAIResponse.status, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
         }
-      );
+      )
     }
     
-    console.log("Generating content for:", { contentType, subject, wordCount });
-    console.log("Knowledge base length:", knowledgeBase.length);
+    const data = await openAIResponse.json()
+    const generatedContent = data.choices[0]?.message?.content || ''
     
-    const prompt = createPrompt(contentType, subject, wordCount, knowledgeBase);
-    const content = await generateContent(prompt);
-    
+    // Return the generated content
     return new Response(
-      JSON.stringify({ content }),
+      JSON.stringify({ content: generatedContent }),
       { 
         status: 200, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
       }
-    );
+    )
   } catch (error) {
-    console.error("Error:", error.message);
-    
+    console.error('Error in generate-content function:', error)
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
+      JSON.stringify({ error: error.message || 'An error occurred during content generation' }),
       { 
         status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
       }
-    );
+    )
   }
-});
+})
