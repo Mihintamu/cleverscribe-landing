@@ -29,6 +29,23 @@ export function KnowledgeBaseForm({
   editItem
 }: KnowledgeBaseFormProps) {
   const { toast } = useToast();
+  const [debug, setDebug] = useState({
+    isOpen,
+    hasSubjects: false,
+    subjectCount: 0,
+    isEditMode: !!editItem
+  });
+  
+  useEffect(() => {
+    // Debug log whenever props change
+    setDebug({
+      isOpen,
+      hasSubjects: subjects && subjects.length > 0,
+      subjectCount: subjects?.length || 0,
+      isEditMode: !!editItem
+    });
+    console.log("KnowledgeBaseForm props:", { isOpen, subjects, editItem });
+  }, [isOpen, subjects, editItem]);
   
   const {
     selectedSubject,
@@ -54,6 +71,7 @@ export function KnowledgeBaseForm({
 
   useEffect(() => {
     if (isOpen && editItem) {
+      console.log("Setting up form for edit mode", editItem);
       setIsCommon(editItem.is_common);
       setContent(editItem.content);
       setHasFile(!!editItem.file_url);
@@ -61,9 +79,15 @@ export function KnowledgeBaseForm({
         setSelectedSubject(editItem.subject);
       }
     } else if (isOpen) {
+      console.log("Setting up form for create mode");
       resetForm();
+      
+      // If we have subjects, pre-select the first one
+      if (subjects && subjects.length > 0) {
+        setSelectedSubject(subjects[0].id);
+      }
     }
-  }, [isOpen, editItem, resetForm, setIsCommon, setContent, setHasFile, setSelectedSubject]);
+  }, [isOpen, editItem, resetForm, setIsCommon, setContent, setHasFile, setSelectedSubject, subjects]);
 
   const handleContentParsed = (parsedContent: string) => {
     setContent(parsedContent);
@@ -73,6 +97,10 @@ export function KnowledgeBaseForm({
     setSelectedFile(file);
     setHasFile(!!file);
   };
+
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -98,6 +126,12 @@ export function KnowledgeBaseForm({
             setContent={setContent} 
             hasFile={hasFile || !!selectedFile}
           />
+
+          {subjects && subjects.length === 0 && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+              No subjects available. Please create a subject first before adding knowledge base entries.
+            </div>
+          )}
         </div>
         
         <FormActions 

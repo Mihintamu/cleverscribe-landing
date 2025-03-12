@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ContentType } from "./types";
+import { ContentType, WordCountOption } from "./types";
 import { formatWords } from "./utils";
 
 export function useContentGeneration(userId: string) {
@@ -45,6 +45,7 @@ export function useContentGeneration(userId: string) {
       });
       
       if (error) {
+        console.error("Edge function error:", error);
         throw new Error(error.message);
       }
       
@@ -72,6 +73,7 @@ export function useContentGeneration(userId: string) {
 
   const fetchKnowledgeBase = async (subjectId: string) => {
     try {
+      console.log("Fetching knowledge base for subject:", subjectId);
       // Get knowledge for the specific subject
       const { data: subjectData, error: subjectError } = await supabase
         .from("knowledge_base")
@@ -80,6 +82,7 @@ export function useContentGeneration(userId: string) {
         .eq("is_common", false);
         
       if (subjectError) {
+        console.error("Error fetching subject knowledge:", subjectError);
         throw subjectError;
       }
       
@@ -90,12 +93,15 @@ export function useContentGeneration(userId: string) {
         .eq("is_common", true);
         
       if (commonError) {
+        console.error("Error fetching common knowledge:", commonError);
         throw commonError;
       }
       
       // Combine both types of knowledge
       const subjectContent = subjectData?.map(item => item.content) || [];
       const commonContent = commonData?.map(item => item.content) || [];
+      
+      console.log(`Found ${subjectContent.length} subject knowledge entries and ${commonContent.length} common knowledge entries`);
       
       return [...subjectContent, ...commonContent].join("\n\n");
     } catch (error) {
@@ -106,18 +112,26 @@ export function useContentGeneration(userId: string) {
 
   const saveGeneratedContent = async (text: string) => {
     try {
+      console.log("Saving generated content to database");
+      
+      // Ensure wordCountOption is a valid enum value
+      const wordCountOption: WordCountOption = formatWords(wordCount);
+      
       const { error } = await supabase.from("generated_content").insert({
         content_type: contentType,
         subject,
         generated_text: text,
         target_word_count: wordCount,
-        word_count_option: formatWords(wordCount),
+        word_count_option: wordCountOption,
         user_id: userId
       });
       
       if (error) {
+        console.error("Error saving content:", error);
         throw error;
       }
+      
+      console.log("Content saved successfully");
     } catch (error) {
       console.error("Error saving generated content:", error);
       // We'll continue even if saving fails

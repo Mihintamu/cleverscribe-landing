@@ -18,6 +18,7 @@ export function KnowledgeBaseManager() {
     loading, 
     searchTerm,
     fetchKnowledgeBase, 
+    fetchSubjects,
     handleEdit, 
     handleDelete,
     handleSearch
@@ -25,23 +26,53 @@ export function KnowledgeBaseManager() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<KnowledgeBase | null>(null);
+  const [debug, setDebug] = useState({
+    knowledgeBaseCount: 0,
+    subjectsCount: 0, 
+    isLoading: true
+  });
 
-  // Re-fetch knowledge base data when component mounts
+  // Re-fetch knowledge base and subjects data when component mounts
   useEffect(() => {
-    fetchKnowledgeBase();
-  }, [fetchKnowledgeBase]);
+    console.log("KnowledgeBaseManager mounted, fetching data...");
+    Promise.all([
+      fetchKnowledgeBase(),
+      fetchSubjects()
+    ]).then(() => {
+      console.log("Initial data fetched successfully");
+    }).catch(error => {
+      console.error("Error fetching initial data:", error);
+    });
+  }, [fetchKnowledgeBase, fetchSubjects]);
+
+  // Debug logging for state changes
+  useEffect(() => {
+    setDebug({
+      knowledgeBaseCount: knowledgeBase?.length || 0,
+      subjectsCount: subjects?.length || 0,
+      isLoading: loading
+    });
+    console.log("KnowledgeBaseManager state updated:", {
+      knowledgeBaseCount: knowledgeBase?.length || 0,
+      subjectsCount: subjects?.length || 0,
+      isLoading: loading
+    });
+  }, [knowledgeBase, subjects, loading]);
 
   const onEdit = (item: KnowledgeBase) => {
+    console.log("Editing item:", item);
     setEditingItem(item);
     setIsDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
+    console.log("Closing dialog");
     setIsDialogOpen(false);
     setEditingItem(null);
   };
 
   const handleAddSuccess = () => {
+    console.log("Knowledge base entry added successfully");
     toast({
       title: "Success",
       description: "Knowledge base entry added successfully!",
@@ -55,7 +86,10 @@ export function KnowledgeBaseManager() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Knowledge Base Manager</CardTitle>
           <Button 
-            onClick={() => setIsDialogOpen(true)}
+            onClick={() => {
+              console.log("Opening dialog to add knowledge");
+              setIsDialogOpen(true);
+            }}
             size="sm"
           >
             <PlusCircle className="mr-2 h-4 w-4" />

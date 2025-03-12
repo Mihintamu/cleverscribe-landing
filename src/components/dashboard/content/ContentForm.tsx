@@ -48,39 +48,29 @@ export function ContentForm({
     const fetchSubjects = async () => {
       setIsLoading(true);
       try {
-        // Check if we're authenticated first
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log("Fetching subjects in ContentForm...");
         
-        if (sessionError || !session) {
-          console.error("Session error:", sessionError);
-          toast({
-            variant: "destructive",
-            title: "Authentication Error",
-            description: "Please log in again to continue.",
-          });
-          return;
-        }
-        
-        console.log("Fetching subjects with active session");
         const { data, error } = await supabase
           .from("subjects")
           .select("*")
           .order("name");
 
         if (error) {
+          console.error("Error fetching subjects in ContentForm:", error);
           throw error;
         }
 
-        console.log("Subjects fetched:", data);
+        console.log("Subjects fetched in ContentForm:", data);
         setSubjects(data || []);
         
         // If no subject is selected and we have subjects, select the first one
         if (data && data.length > 0 && !selectedSubjectId) {
           setSelectedSubjectId(data[0].id);
           setSubject(data[0].name);
+          console.log("Auto-selecting first subject:", data[0]);
         }
       } catch (error: any) {
-        console.error("Error fetching subjects:", error);
+        console.error("Failed to fetch subjects in ContentForm:", error);
         toast({
           variant: "destructive",
           title: "Error",
@@ -102,6 +92,7 @@ export function ContentForm({
       );
       if (selectedSubject) {
         setSubject(selectedSubject.name);
+        console.log("Selected subject updated:", selectedSubject);
       }
     }
   }, [selectedSubjectId, subjects, setSubject]);
@@ -129,7 +120,6 @@ export function ContentForm({
               <SelectItem value="book_review">Book Review</SelectItem>
               <SelectItem value="article_reviews">Article Reviews</SelectItem>
               <SelectItem value="term_papers">Term Papers</SelectItem>
-              <SelectItem value="exam_notes">Exam Notes</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -139,7 +129,7 @@ export function ContentForm({
           {isLoading ? (
             <div className="h-10 bg-gray-100 animate-pulse rounded-md"></div>
           ) : subjects.length === 0 ? (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground p-3 bg-gray-50 rounded-md border">
               No subjects available. Please create subjects in the admin dashboard.
             </div>
           ) : (

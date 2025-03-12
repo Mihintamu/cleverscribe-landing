@@ -27,14 +27,23 @@ export function SubjectManager() {
 
   const fetchSubjects = async () => {
     try {
+      setLoading(true);
+      console.log("Fetching subjects in SubjectManager...");
+      
       const { data, error } = await supabase
         .from('subjects')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching subjects:", error);
+        throw error;
+      }
+      
+      console.log("Subjects fetched:", data);
       setSubjects(data || []);
     } catch (error: any) {
+      console.error("Failed to fetch subjects:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -56,12 +65,15 @@ export function SubjectManager() {
     }
 
     try {
-      const { error } = await supabase
+      console.log("Adding new subject:", newSubjectName);
+      const { data, error } = await supabase
         .from('subjects')
-        .insert({ name: newSubjectName.trim() });
+        .insert({ name: newSubjectName.trim() })
+        .select();
 
       if (error) throw error;
       
+      console.log("Subject added successfully:", data);
       toast({
         title: "Success",
         description: "Subject added successfully",
@@ -71,6 +83,7 @@ export function SubjectManager() {
       setIsDialogOpen(false);
       fetchSubjects();
     } catch (error: any) {
+      console.error("Failed to add subject:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -120,10 +133,6 @@ export function SubjectManager() {
     }
   };
 
-  if (loading) {
-    return <div>Loading subjects...</div>;
-  }
-
   return (
     <div className="space-y-6">
       <Card>
@@ -138,7 +147,12 @@ export function SubjectManager() {
           </Button>
         </CardHeader>
         <CardContent>
-          {subjects.length === 0 ? (
+          {loading ? (
+            <div className="py-4 space-y-3">
+              <div className="h-12 bg-gray-100 animate-pulse rounded-md"></div>
+              <div className="h-12 bg-gray-100 animate-pulse rounded-md"></div>
+            </div>
+          ) : subjects.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">No subjects found. Create one to get started.</p>
           ) : (
             <div className="space-y-2">
