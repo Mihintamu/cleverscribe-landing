@@ -38,6 +38,7 @@ export function WriteContent({ userId }: WriteContentProps) {
   useEffect(() => {
     const checkPreviousGenerations = async () => {
       try {
+        console.log("Checking previous generations for user:", userId);
         const { count, error } = await supabase
           .from('generated_content')
           .select('*', { count: 'exact', head: true })
@@ -45,6 +46,7 @@ export function WriteContent({ userId }: WriteContentProps) {
         
         if (error) throw error;
         
+        console.log("Previous generations count:", count);
         setHasGeneratedBefore(!!count && count > 0);
       } catch (error) {
         console.error("Error checking previous generations:", error);
@@ -75,8 +77,11 @@ export function WriteContent({ userId }: WriteContentProps) {
         .single();
       
       if (subscriptionError) {
+        console.error("Subscription error:", subscriptionError);
         throw new Error("Could not verify subscription status");
       }
+      
+      console.log("Subscription data:", subscriptionData);
       
       // Check if this is a free plan user who has already generated content
       if (subscriptionData.subscription_plans.name.toLowerCase() === 'free' && hasGeneratedBefore) {
@@ -100,6 +105,10 @@ export function WriteContent({ userId }: WriteContentProps) {
       }
 
       // Call the edge function to generate content
+      console.log("Calling edge function with:", {
+        contentType, selectedSubjectId, subject, wordCount
+      });
+      
       const { data, error } = await supabase.functions.invoke('generate-content', {
         body: {
           contentType,
@@ -109,7 +118,12 @@ export function WriteContent({ userId }: WriteContentProps) {
         }
       });
 
-      if (error) throw error;
+      console.log("Edge function response:", { data, error });
+      
+      if (error) {
+        console.error("Edge function error:", error);
+        throw error;
+      }
       
       const generatedText = data.generatedText;
       setGeneratedContent(generatedText);
@@ -121,6 +135,14 @@ export function WriteContent({ userId }: WriteContentProps) {
         contentType === 'exam_notes' ? 'term_papers' : contentType as any;
       
       // Save to database
+      console.log("Saving to database:", {
+        user_id: userId,
+        content_type: dbContentType,
+        subject,
+        word_count_option: wordCount <= 750 ? 'short' : wordCount <= 1500 ? 'medium' : 'long',
+        target_word_count: wordCount,
+      });
+      
       const { error: insertError } = await supabase
         .from('generated_content')
         .insert({
@@ -133,10 +155,15 @@ export function WriteContent({ userId }: WriteContentProps) {
         });
       
       if (insertError) {
+        console.error("Insert error:", insertError);
         throw new Error("Failed to save generated content");
       }
       
       // Update user's remaining credits
+      console.log("Updating credits:", {
+        credits_remaining: subscriptionData.credits_remaining - 1
+      });
+      
       const { error: updateError } = await supabase
         .from('user_subscriptions')
         .update({ 
@@ -145,6 +172,7 @@ export function WriteContent({ userId }: WriteContentProps) {
         .eq('user_id', userId);
       
       if (updateError) {
+        console.error("Update credits error:", updateError);
         throw new Error("Failed to update credits");
       }
 
@@ -156,6 +184,7 @@ export function WriteContent({ userId }: WriteContentProps) {
         description: "Your content has been generated successfully",
       });
     } catch (error: any) {
+      console.error("Content generation error:", error);
       toast({
         variant: "destructive",
         title: "Error",

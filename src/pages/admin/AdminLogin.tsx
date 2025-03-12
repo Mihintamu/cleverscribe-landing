@@ -32,28 +32,29 @@ export default function AdminLogin() {
         throw new Error("Invalid admin access code");
       }
 
-      // Step 2: Create and sign in the admin user if it doesn't exist
-      // Check if the admin user exists first by trying to sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      // Step 2: Check if user exists and sign in
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      // If the user doesn't exist or the password is incorrect
-      if (signInError) {
-        // Check if it's a "User not found" error, which means we need to create the user
-        if (signInError.message.includes("Invalid login credentials")) {
-          // First, sign up the admin user if they don't exist
+      if (error) {
+        // If login failed because user doesn't exist, we create them
+        if (error.message.includes("Invalid login credentials")) {
+          // Create user account
           const { error: signUpError } = await supabase.auth.signUp({
             email,
             password,
+            options: {
+              emailRedirectTo: window.location.origin + "/admin/dashboard"
+            }
           });
 
           if (signUpError) {
             throw new Error(signUpError.message || "Failed to create admin account");
           }
 
-          // Then try to sign in with the created account
+          // Try to sign in again
           const { error: finalSignInError } = await supabase.auth.signInWithPassword({
             email,
             password,
@@ -63,17 +64,8 @@ export default function AdminLogin() {
             throw new Error(finalSignInError.message || "Failed to sign in with admin account");
           }
         } else {
-          // If it's another type of error, throw it
-          throw new Error(signInError.message || "Invalid email or password");
+          throw new Error(error.message || "Invalid email or password");
         }
-      }
-
-      // Step 3: Check if the email matches the admin email
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email !== "mihintamu@gmail.com") {
-        // Sign out if not admin user
-        await supabase.auth.signOut();
-        throw new Error("This account doesn't have admin privileges");
       }
 
       toast({
@@ -83,6 +75,7 @@ export default function AdminLogin() {
 
       navigate("/admin/dashboard");
     } catch (error: any) {
+      console.error("Admin login error:", error);
       toast({
         variant: "destructive",
         title: "Login Failed",

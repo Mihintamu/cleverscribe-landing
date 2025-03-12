@@ -16,6 +16,7 @@ import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 interface ContentFormProps {
   contentType: ContentType;
@@ -44,6 +45,7 @@ export function ContentForm({
 }: ContentFormProps) {
   const [subjectOptions, setSubjectOptions] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   const { toast } = useToast();
   
   const contentTypes: ContentType[] = [
@@ -63,14 +65,19 @@ export function ContentForm({
   useEffect(() => {
     const fetchSubjects = async () => {
       setLoading(true);
+      setLoadingError(null);
       try {
+        console.log("Fetching subjects...");
         const { data, error } = await supabase
           .from('subjects')
           .select('id, name')
           .order('name');
         
+        console.log("Subjects response:", { data, error });
+        
         if (error) {
           console.error("Error fetching subjects:", error);
+          setLoadingError("Failed to load subjects. Please try again later.");
           toast({
             variant: "destructive",
             title: "Error",
@@ -80,12 +87,16 @@ export function ContentForm({
         }
         
         if (data && data.length > 0) {
+          console.log("Subjects found:", data.length);
           setSubjectOptions(data);
+          
           // Set the first subject as default if none is selected
           if (!selectedSubjectId) {
             setSelectedSubjectId(data[0].id);
           }
         } else {
+          console.log("No subjects found");
+          setLoadingError("No subjects found. Please contact support or add subjects in admin panel.");
           toast({
             variant: "destructive",
             title: "No Subjects Found",
@@ -131,22 +142,33 @@ export function ContentForm({
           
           <div className="space-y-2">
             <Label htmlFor="subject-id">Subject</Label>
-            <Select
-              value={selectedSubjectId}
-              onValueChange={setSelectedSubjectId}
-              disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={loading ? "Loading subjects..." : "Select a subject"} />
-              </SelectTrigger>
-              <SelectContent>
-                {subjectOptions.map((subj) => (
-                  <SelectItem key={subj.id} value={subj.id}>
-                    {subj.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {loading ? (
+              <div className="flex items-center space-x-2 p-2 border rounded">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">Loading subjects...</span>
+              </div>
+            ) : loadingError ? (
+              <div className="p-2 border border-destructive bg-destructive/10 rounded text-destructive text-sm">
+                {loadingError}
+              </div>
+            ) : (
+              <Select
+                value={selectedSubjectId}
+                onValueChange={setSelectedSubjectId}
+                disabled={loading || subjectOptions.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loading ? "Loading subjects..." : subjectOptions.length === 0 ? "No subjects available" : "Select a subject"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjectOptions.map((subj) => (
+                    <SelectItem key={subj.id} value={subj.id}>
+                      {subj.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -187,7 +209,7 @@ export function ContentForm({
           <Button 
             className="w-full" 
             onClick={onGenerate}
-            disabled={isGenerating || !subject || !selectedSubjectId}
+            disabled={isGenerating || !subject || !selectedSubjectId || subjectOptions.length === 0}
           >
             {isGenerating ? "Generating..." : "Generate Content"}
           </Button>

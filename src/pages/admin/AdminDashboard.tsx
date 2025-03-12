@@ -22,12 +22,24 @@ export default function AdminDashboard() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         
-        if (!user || user.email !== "mihintamu@gmail.com") {
+        if (!user) {
           navigate("/admin");
           return;
         }
         
-        setIsAdmin(true);
+        // For this simple app, we're using a specific email as admin
+        // In a production app, you would check against a role in the database
+        if (user.email === "mihintamu@gmail.com") {
+          setIsAdmin(true);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Access denied",
+            description: "You don't have admin privileges"
+          });
+          navigate("/admin");
+          return;
+        }
       } catch (error) {
         console.error("Error checking admin status:", error);
         navigate("/admin");
@@ -37,7 +49,7 @@ export default function AdminDashboard() {
     };
 
     checkAdminStatus();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleTabChange = (value: string) => {
     setSelectedTab(value);
