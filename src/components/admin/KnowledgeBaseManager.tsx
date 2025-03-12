@@ -8,6 +8,7 @@ import { KnowledgeBaseForm } from "./knowledge-base/KnowledgeBaseForm";
 import { useKnowledgeBase } from "./knowledge-base/hooks/useKnowledgeBase";
 import { SearchBar } from "./knowledge-base/SearchBar";
 import { useToast } from "@/hooks/use-toast";
+import { KnowledgeBase } from "./knowledge-base/types";
 
 export function KnowledgeBaseManager() {
   const { toast } = useToast();
@@ -23,14 +24,14 @@ export function KnowledgeBaseManager() {
   } = useKnowledgeBase();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
+  const [editingItem, setEditingItem] = useState<KnowledgeBase | null>(null);
 
   // Re-fetch knowledge base data when component mounts
   useEffect(() => {
     fetchKnowledgeBase();
   }, [fetchKnowledgeBase]);
 
-  const onEdit = (item) => {
+  const onEdit = (item: KnowledgeBase) => {
     setEditingItem(item);
     setIsDialogOpen(true);
   };

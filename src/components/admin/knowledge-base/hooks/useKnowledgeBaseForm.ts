@@ -1,22 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
-type Subject = {
-  id: string;
-  name: string;
-};
-
-type KnowledgeBase = {
-  id: string;
-  subject: string;
-  content: string;
-  is_common: boolean;
-  created_at: string;
-  subject_name?: string;
-  file_url?: string;
-  file_type?: string;
-};
+import { Subject, KnowledgeBase } from "../types";
 
 type FormHookProps = {
   editItem?: KnowledgeBase | null;

@@ -11,22 +11,7 @@ import { ContentInput } from "./ContentInput";
 import { FormActions } from "./FormActions";
 import { uploadFile } from "./utils";
 import { useKnowledgeBaseForm } from "./hooks/useKnowledgeBaseForm";
-
-type Subject = {
-  id: string;
-  name: string;
-};
-
-type KnowledgeBase = {
-  id: string;
-  subject: string;
-  content: string;
-  is_common: boolean;
-  created_at: string;
-  subject_name?: string;
-  file_url?: string;
-  file_type?: string;
-};
+import { Subject, KnowledgeBase } from "./types";
 
 interface KnowledgeBaseFormProps {
   isOpen: boolean;
