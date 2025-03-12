@@ -57,6 +57,7 @@ export function PricingCard({
       });
 
       if (secretError || !secretData?.keyId) {
+        console.error("Failed to retrieve Razorpay key:", secretError);
         throw new Error("Failed to retrieve payment information");
       }
 
@@ -67,33 +68,46 @@ export function PricingCard({
         description: `Subscription for ${name} plan`,
         keyId: secretData.keyId,
         onSuccess: async (response) => {
-          // Save payment information to database
-          const { error: subscriptionError } = await supabase
-            .from('user_subscriptions')
-            .upsert({
-              user_id: data.session?.user.id,
-              plan_name: name.toLowerCase(),
-              payment_id: response.razorpay_payment_id,
-              payment_method: 'razorpay',
-              amount: price,
-              status: 'completed',
-              credits_remaining: name === 'Free' ? 1 : name === 'Basic' ? 8 : 30
-            });
+          try {
+            // Calculate credits based on plan name
+            const credits = name === 'Free' ? 1 : name === 'Basic' ? 8 : 30;
+            
+            // Save payment information to database
+            const { error: subscriptionError } = await supabase
+              .from('user_subscriptions')
+              .upsert({
+                user_id: data.session?.user.id,
+                plan_name: name.toLowerCase(),
+                payment_id: response.razorpay_payment_id,
+                payment_method: 'razorpay',
+                amount: price,
+                status: 'completed',
+                credits_remaining: credits
+              });
 
-          if (subscriptionError) {
-            console.error("Subscription error:", subscriptionError);
+            if (subscriptionError) {
+              console.error("Subscription error:", subscriptionError);
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Payment was successful but we couldn't update your subscription. Please contact support.",
+              });
+            } else {
+              toast({
+                title: "Success",
+                description: `You've successfully subscribed to the ${name} plan!`,
+              });
+            }
+          } catch (err) {
+            console.error("Error saving subscription:", err);
             toast({
               variant: "destructive",
               title: "Error",
-              description: "Payment was successful but we couldn't update your subscription. Please contact support.",
+              description: "Payment was successful but there was an error updating your subscription. Please contact support.",
             });
-          } else {
-            toast({
-              title: "Success",
-              description: `You've successfully subscribed to the ${name} plan!`,
-            });
+          } finally {
+            setLoading(false);
           }
-          setLoading(false);
         },
         onError: (error) => {
           console.error("Razorpay error:", error);

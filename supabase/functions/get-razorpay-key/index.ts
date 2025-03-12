@@ -22,6 +22,7 @@ serve(async (req) => {
     const keyId = Deno.env.get(key)
     
     if (!keyId) {
+      console.error(`API key not found: ${key}`)
       return new Response(
         JSON.stringify({ error: 'API key not found' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
@@ -33,6 +34,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
+    console.error(`Error in get-razorpay-key function: ${error.message}`)
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

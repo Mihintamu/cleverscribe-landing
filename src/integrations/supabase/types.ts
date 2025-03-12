@@ -167,26 +167,41 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
+          amount: number | null
           created_at: string
           credits_remaining: number
           id: string
+          payment_id: string | null
+          payment_method: string | null
           plan_id: number
+          plan_name: string | null
+          status: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          amount?: number | null
           created_at?: string
           credits_remaining: number
           id?: string
+          payment_id?: string | null
+          payment_method?: string | null
           plan_id: number
+          plan_name?: string | null
+          status?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          amount?: number | null
           created_at?: string
           credits_remaining?: number
           id?: string
+          payment_id?: string | null
+          payment_method?: string | null
           plan_id?: number
+          plan_name?: string | null
+          status?: string | null
           updated_at?: string
           user_id?: string
         }
