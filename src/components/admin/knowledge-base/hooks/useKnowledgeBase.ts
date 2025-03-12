@@ -6,7 +6,7 @@ import { useFilterKnowledgeBase } from "./useFilterKnowledgeBase";
 import { useKnowledgeBaseOperations } from "./useKnowledgeBaseOperations";
 import { KnowledgeBase } from "../types";
 
-export { KnowledgeBase } from "../types";
+export type { KnowledgeBase } from "../types";
 
 export function useKnowledgeBase() {
   const { subjects, fetchSubjects } = useSubjects();
