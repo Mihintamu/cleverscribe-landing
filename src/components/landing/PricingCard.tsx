@@ -94,7 +94,7 @@ export function PricingCard({
               .upsert({
                 user_id: data.session?.user.id,
                 plan_name: name.toLowerCase(),
-                plan_id: planId, // Add required plan_id
+                plan_id: planId,
                 payment_id: response.razorpay_payment_id,
                 payment_method: 'razorpay',
                 amount: price,
