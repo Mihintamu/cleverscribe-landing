@@ -20,18 +20,29 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!user) {
+        if (error) {
+          console.error("Session error:", error);
+          throw new Error("Authentication error");
+        }
+        
+        if (!session) {
+          console.log("No active session, redirecting to admin login");
           navigate("/admin");
           return;
         }
         
-        // For this simple app, we're using a specific email as admin
+        const { user } = session;
+        console.log("Checking admin status for user:", user.email);
+        
+        // For this app, we're using a specific email as admin
         // In a production app, you would check against a role in the database
         if (user.email === "mihintamu@gmail.com") {
+          console.log("Admin status confirmed");
           setIsAdmin(true);
         } else {
+          console.log("User is not an admin");
           toast({
             variant: "destructive",
             title: "Access denied",
@@ -40,8 +51,13 @@ export default function AdminDashboard() {
           navigate("/admin");
           return;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error checking admin status:", error);
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: error.message || "Please log in again",
+        });
         navigate("/admin");
       } finally {
         setLoading(false);
@@ -56,20 +72,35 @@ export default function AdminDashboard() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/admin");
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Sign out error:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to sign out. Please try again.",
+        });
+        return;
+      }
+      
+      navigate("/admin");
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+        <div className="animate-pulse">Loading admin dashboard...</div>
       </div>
     );
   }
 
   if (!isAdmin) {
-    return null;
+    return null; // This will prevent flash before redirect
   }
 
   return (

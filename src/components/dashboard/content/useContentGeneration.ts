@@ -24,16 +24,21 @@ export function useContentGeneration(userId: string) {
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId);
         
-        if (error) throw error;
+        if (error) {
+          console.error("Error checking previous generations:", error);
+          throw error;
+        }
         
         console.log("Previous generations count:", count);
         setHasGeneratedBefore(!!count && count > 0);
-      } catch (error) {
-        console.error("Error checking previous generations:", error);
+      } catch (error: any) {
+        console.error("Error checking previous generations:", error.message);
       }
     };
     
-    checkPreviousGenerations();
+    if (userId) {
+      checkPreviousGenerations();
+    }
   }, [userId]);
 
   const handleGenerate = async () => {
@@ -170,7 +175,7 @@ export function useContentGeneration(userId: string) {
       console.error("Content generation error:", error);
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Generation Failed",
         description: error.message || "An error occurred while generating content",
       });
     } finally {

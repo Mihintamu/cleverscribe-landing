@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,34 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          // First check if this user is an admin
+          if (session.user.email === "mihintamu@gmail.com") {
+            navigate("/admin/dashboard");
+            return;
+          }
+          
+          // If not admin, sign out this session
+          await supabase.auth.signOut();
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+    
+    checkExistingSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +48,7 @@ export default function AdminLogin() {
 
     try {
       console.log("Starting admin login process");
+      
       // Step 1: Verify the access code
       const { data: accessCodes, error: codeError } = await supabase
         .from('admin_access_codes')
@@ -29,14 +56,14 @@ export default function AdminLogin() {
         .eq('code', accessCode)
         .single();
 
-      if (codeError || !accessCodes) {
+      if (codeError) {
         console.error("Invalid access code:", codeError);
         throw new Error("Invalid admin access code");
       }
 
       console.log("Access code verified, attempting login");
       
-      // Step 2: Try to sign in directly
+      // Step 2: Try to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -44,40 +71,7 @@ export default function AdminLogin() {
 
       if (error) {
         console.log("Sign in error:", error.message);
-        
-        // If user doesn't exist or invalid credentials, sign up
-        if (error.message.includes("Invalid login credentials")) {
-          console.log("Attempting to create admin account");
-          // Create admin account
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: window.location.origin + "/admin/dashboard"
-            }
-          });
-
-          if (signUpError) {
-            // If error is about user already existing, try to sign in again
-            if (signUpError.message.includes("User already registered")) {
-              console.log("User already exists, retrying login with provided password");
-              const { error: finalSignInError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-              });
-
-              if (finalSignInError) {
-                console.error("Final sign in attempt failed:", finalSignInError);
-                throw new Error("Incorrect password for existing admin account");
-              }
-            } else {
-              console.error("Sign up error:", signUpError);
-              throw new Error(signUpError.message || "Failed to create admin account");
-            }
-          }
-        } else {
-          throw new Error(error.message || "Invalid email or password");
-        }
+        throw new Error(error.message || "Invalid email or password");
       }
 
       console.log("Admin login successful");
@@ -98,6 +92,14 @@ export default function AdminLogin() {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse">Checking session...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">

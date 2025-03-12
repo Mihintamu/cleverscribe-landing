@@ -7,33 +7,77 @@ import { WriteContent } from "@/components/dashboard/WriteContent";
 import { ContentHistory } from "@/components/dashboard/ContentHistory";
 import { UserSettings } from "@/components/dashboard/UserSettings";
 import { Session } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (!session) {
+    const fetchSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session error:", error);
+          toast({
+            variant: "destructive",
+            title: "Session Error",
+            description: "There was a problem loading your session. Please try logging in again.",
+          });
+          navigate("/auth");
+          return;
+        }
+        
+        if (!session) {
+          // No active session, redirect to login
+          navigate("/auth");
+          return;
+        }
+        
+        setSession(session);
+      } catch (error) {
+        console.error("Error fetching session:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "An unexpected error occurred. Please try again.",
+        });
         navigate("/auth");
+      } finally {
+        setLoading(false);
       }
-    });
+    };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (!session) {
-        navigate("/auth");
+    fetchSession();
+
+    // Subscribe to auth changes
+    const { data: { subscription }} = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        console.log("Auth state changed:", event);
+        setSession(currentSession);
+        
+        if (event === "SIGNED_OUT" || !currentSession) {
+          navigate("/auth");
+        }
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center h-screen">
+        <div className="animate-pulse">Loading your dashboard...</div>
+      </div>
+    );
+  }
 
   if (!session) {
-    return null;
+    return null; // This will avoid a flash before redirecting to auth
   }
 
   return (

@@ -22,17 +22,23 @@ export function SignupForm({ setIsLogin }: SignupFormProps) {
     setLoading(true);
 
     try {
-      // Check if user exists before signup
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (existingUser) {
-        throw new Error("An account with this email already exists. Please sign in instead.");
+      if (!email || !password) {
+        throw new Error("Email and password are required");
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error("Please enter a valid email address");
+      }
+      
+      // Validate password strength
+      if (password.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
       }
 
+      console.log("Attempting signup with email:", email);
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -49,7 +55,7 @@ export function SignupForm({ setIsLogin }: SignupFormProps) {
       }
 
       if (data?.user) {
-        console.log("Signup successful:", data);
+        console.log("Signup successful for user:", data.user.id);
         toast({
           title: "Success!",
           description: "Account created successfully. Please check your email for verification.",
@@ -57,19 +63,26 @@ export function SignupForm({ setIsLogin }: SignupFormProps) {
         // Switch to login view after successful signup
         setIsLogin(true);
       } else {
-        toast({
-          variant: "destructive",
-          title: "Signup Failed",
-          description: "Could not create your account. Please try again.",
-        });
+        console.warn("No user data returned after signup");
+        throw new Error("Could not create your account. Please try again.");
       }
     } catch (error: any) {
       console.error("Auth error:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "An unexpected error occurred",
-      });
+      
+      // Handle specific cases
+      if (error.message?.includes("already registered")) {
+        toast({
+          variant: "destructive",
+          title: "Account Exists",
+          description: "An account with this email already exists. Please sign in instead.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Signup Failed",
+          description: error.message || "An unexpected error occurred",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -86,6 +99,7 @@ export function SignupForm({ setIsLogin }: SignupFormProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            placeholder="your@email.com"
           />
         </div>
 
@@ -96,7 +110,7 @@ export function SignupForm({ setIsLogin }: SignupFormProps) {
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            required
+            placeholder="+1234567890"
           />
         </div>
 
@@ -108,11 +122,15 @@ export function SignupForm({ setIsLogin }: SignupFormProps) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            placeholder="••••••••"
           />
+          <p className="text-xs text-muted-foreground">
+            Must be at least 6 characters
+          </p>
         </div>
 
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Loading..." : "Sign Up"}
+          {loading ? "Creating account..." : "Sign Up"}
         </Button>
       </form>
 

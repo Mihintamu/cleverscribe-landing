@@ -23,8 +23,12 @@ export function LoginForm({ setIsLogin }: LoginFormProps) {
     setLoading(true);
 
     try {
+      if (!email || !password) {
+        throw new Error("Email and password are required");
+      }
+      
       // Log detailed info for debugging
-      console.log("Attempting to sign in with:", { email });
+      console.log("Attempting to sign in with email:", email);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -33,17 +37,11 @@ export function LoginForm({ setIsLogin }: LoginFormProps) {
       
       if (error) {
         console.error("Login error:", error);
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: error.message || "Invalid email or password. Please try again.",
-        });
-        setLoading(false);
-        return;
+        throw new Error(error.message || "Invalid email or password");
       }
 
       if (data?.session) {
-        console.log("Login successful, session:", data.session);
+        console.log("Login successful");
         toast({
           title: "Login Successful",
           description: "Welcome back!",
@@ -51,17 +49,13 @@ export function LoginForm({ setIsLogin }: LoginFormProps) {
         navigate("/dashboard");
       } else {
         console.warn("No session returned after login");
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: "Could not create a session. Please try again.",
-        });
+        throw new Error("Could not create a session. Please try again.");
       }
     } catch (error: any) {
       console.error("Auth error:", error);
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Login Failed",
         description: error.message || "An unexpected error occurred",
       });
     } finally {
@@ -80,6 +74,7 @@ export function LoginForm({ setIsLogin }: LoginFormProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            placeholder="your@email.com"
           />
         </div>
 
@@ -91,11 +86,12 @@ export function LoginForm({ setIsLogin }: LoginFormProps) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            placeholder="••••••••"
           />
         </div>
 
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Loading..." : "Sign In"}
+          {loading ? "Signing in..." : "Sign In"}
         </Button>
       </form>
 

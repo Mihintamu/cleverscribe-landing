@@ -1,14 +1,14 @@
 
 export type ContentType = 
-  | 'assignments' 
-  | 'reports' 
-  | 'research_paper' 
-  | 'essays' 
+  | 'assignments'
+  | 'reports'
+  | 'research_paper'
+  | 'essays'
   | 'thesis'
-  | 'presentation' 
-  | 'case_studies' 
-  | 'book_review' 
-  | 'article_reviews' 
+  | 'presentation'
+  | 'case_studies'
+  | 'book_review'
+  | 'article_reviews'
   | 'term_papers'
   | 'exam_notes';
 
@@ -16,4 +16,24 @@ export type WordCountOption = 'short' | 'medium' | 'long';
 
 export interface WriteContentProps {
   userId: string;
+}
+
+export interface ContentFormProps {
+  contentType: ContentType;
+  setContentType: (value: ContentType) => void;
+  subject: string;
+  setSubject: (value: string) => void;
+  selectedSubjectId: string;
+  setSelectedSubjectId: (value: string) => void;
+  wordCount: string;
+  setWordCount: (value: string) => void;
+  isGenerating: boolean;
+  onGenerate: () => void;
+}
+
+export interface ContentDisplayProps {
+  generatedContent: string;
+  isGenerating: boolean;
+  onDownloadText: () => void;
+  onDownloadPDF: () => void;
 }
