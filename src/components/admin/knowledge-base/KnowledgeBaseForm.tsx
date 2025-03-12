@@ -57,7 +57,7 @@ export function KnowledgeBaseForm({
       setIsCommon(editItem.is_common);
       setContent(editItem.content);
       setHasFile(!!editItem.file_url);
-      if (!editItem.is_common) {
+      if (!editItem.is_common && editItem.subject) {
         setSelectedSubject(editItem.subject);
       }
     } else if (isOpen) {
@@ -78,7 +78,7 @@ export function KnowledgeBaseForm({
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) onClose();
     }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md overflow-y-auto max-h-[90vh]">
         <FormHeader isEditing={!!editItem} />
         
         <div className="space-y-4 py-4">

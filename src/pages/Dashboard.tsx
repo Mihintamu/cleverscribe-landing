@@ -25,7 +25,7 @@ export default function Dashboard() {
           toast({
             variant: "destructive",
             title: "Session Error",
-            description: "There was a problem loading your session. Please try logging in again.",
+            description: "Please login again to continue.",
           });
           navigate("/auth");
           return;
@@ -33,6 +33,21 @@ export default function Dashboard() {
         
         if (!session) {
           // No active session, redirect to login
+          navigate("/auth");
+          return;
+        }
+        
+        // Check JWT expiration
+        const expiresAt = session.expires_at;
+        const now = Math.floor(Date.now() / 1000);
+        
+        if (expiresAt && expiresAt < now) {
+          toast({
+            variant: "destructive",
+            title: "Session Expired",
+            description: "Your session has expired. Please login again.",
+          });
+          await supabase.auth.signOut();
           navigate("/auth");
           return;
         }
@@ -57,11 +72,19 @@ export default function Dashboard() {
     const { data: { subscription }} = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log("Auth state changed:", event);
-        setSession(currentSession);
         
         if (event === "SIGNED_OUT" || !currentSession) {
           navigate("/auth");
+          return;
         }
+        
+        // Refresh session to get updated JWT if token was refreshed
+        if (event === "TOKEN_REFRESHED") {
+          fetchSession();
+          return;
+        }
+        
+        setSession(currentSession);
       }
     );
 

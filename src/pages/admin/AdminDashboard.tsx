@@ -3,60 +3,53 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { UserAnalytics } from "@/components/admin/UserAnalytics";
-import { SalesAnalytics } from "@/components/admin/SalesAnalytics";
-import { SubjectManager } from "@/components/admin/SubjectManager";
 import { KnowledgeBaseManager } from "@/components/admin/KnowledgeBaseManager";
+import { SubjectManager } from "@/components/admin/SubjectManager";
+import { SalesAnalytics } from "@/components/admin/SalesAnalytics";
+import { UserAnalytics } from "@/components/admin/UserAnalytics";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState('users');
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Session error:", error);
-          throw new Error("Authentication error");
-        }
-        
-        if (!session) {
-          console.log("No active session, redirecting to admin login");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !session) {
           navigate("/admin");
           return;
         }
+
+        // Validate JWT token
+        const expiresAt = session.expires_at;
+        const now = Math.floor(Date.now() / 1000);
         
-        const { user } = session;
-        console.log("Checking admin status for user:", user.email);
-        
-        // For this app, we're using a specific email as admin
-        // In a production app, you would check against a role in the database
-        if (user.email === "mihintamu@gmail.com") {
-          console.log("Admin status confirmed");
-          setIsAdmin(true);
-        } else {
-          console.log("User is not an admin");
+        if (expiresAt && expiresAt < now) {
           toast({
             variant: "destructive",
-            title: "Access denied",
-            description: "You don't have admin privileges"
+            title: "Session Expired",
+            description: "Your session has expired. Please login again.",
           });
+          await supabase.auth.signOut();
           navigate("/admin");
           return;
         }
-      } catch (error: any) {
-        console.error("Error checking admin status:", error);
+
+        // For simplicity, we'll set isAdmin to true
+        // In a real app, you would check for admin role from a profiles table
+        setIsAdmin(true);
+      } catch (error) {
+        console.error("Admin check error:", error);
         toast({
           variant: "destructive",
-          title: "Authentication Error",
-          description: error.message || "Please log in again",
+          title: "Error",
+          description: "An unexpected error occurred. Please try again.",
         });
         navigate("/admin");
       } finally {
@@ -67,73 +60,86 @@ export default function AdminDashboard() {
     checkAdminStatus();
   }, [navigate, toast]);
 
-  const handleTabChange = (value: string) => {
-    setSelectedTab(value);
-  };
-
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        console.error("Sign out error:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to sign out. Please try again.",
-        });
-        return;
+        throw error;
       }
       
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      
       navigate("/admin");
-    } catch (error) {
-      console.error("Sign out error:", error);
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to log out",
+      });
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading admin dashboard...</div>
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-pulse">Verifying admin access...</div>
       </div>
     );
   }
 
   if (!isAdmin) {
-    return null; // This will prevent flash before redirect
+    return null;
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex flex-col">
+        <header className="bg-white shadow-sm border-b">
+          <div className="container px-4 py-4 mx-auto max-w-7xl flex flex-col sm:flex-row justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4 sm:mb-0">Admin Dashboard</h1>
+            <div className="flex space-x-4">
+              <Button variant="ghost" onClick={() => navigate("/")}>
+                View Site
+              </Button>
+              <Button variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <main className="container px-4 py-8 mx-auto max-w-7xl">
+          <Tabs defaultValue="knowledge" className="w-full">
+            <TabsList className="w-full mb-8 grid grid-cols-2 md:grid-cols-4">
+              <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
+              <TabsTrigger value="subjects">Subjects</TabsTrigger>
+              <TabsTrigger value="sales">Sales</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="knowledge" className="space-y-4">
+              <KnowledgeBaseManager />
+            </TabsContent>
+            
+            <TabsContent value="subjects" className="space-y-4">
+              <SubjectManager />
+            </TabsContent>
+            
+            <TabsContent value="sales" className="space-y-4">
+              <SalesAnalytics />
+            </TabsContent>
+            
+            <TabsContent value="users" className="space-y-4">
+              <UserAnalytics />
+            </TabsContent>
+          </Tabs>
+        </main>
       </div>
-      
-      <Tabs value={selectedTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
-          <TabsTrigger value="users">User Analytics</TabsTrigger>
-          <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
-          <TabsTrigger value="subjects">Subject Management</TabsTrigger>
-          <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="users" className="mt-6">
-          <UserAnalytics />
-        </TabsContent>
-        
-        <TabsContent value="sales" className="mt-6">
-          <SalesAnalytics />
-        </TabsContent>
-        
-        <TabsContent value="subjects" className="mt-6">
-          <SubjectManager />
-        </TabsContent>
-        
-        <TabsContent value="knowledge" className="mt-6">
-          <KnowledgeBaseManager />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

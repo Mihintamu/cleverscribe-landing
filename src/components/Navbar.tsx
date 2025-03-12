@@ -1,7 +1,7 @@
 
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -11,6 +11,7 @@ interface NavbarProps {
 
 export function Navbar({ isLoggedIn = false }: NavbarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   const handleLogout = async () => {
@@ -36,6 +37,11 @@ export function Navbar({ isLoggedIn = false }: NavbarProps) {
       });
     }
   };
+
+  // Don't render the navbar on admin pages to avoid navigation conflicts
+  if (location.pathname.startsWith("/admin")) {
+    return null;
+  }
 
   return (
     <nav className="border-b shadow-sm bg-white">

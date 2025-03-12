@@ -41,11 +41,27 @@ export function ContentForm({
   onGenerate,
 }: ContentFormProps) {
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchSubjects = async () => {
+      setIsLoading(true);
       try {
+        // Check if we're authenticated first
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          console.error("Session error:", sessionError);
+          toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "Please log in again to continue.",
+          });
+          return;
+        }
+        
+        console.log("Fetching subjects with active session");
         const { data, error } = await supabase
           .from("subjects")
           .select("*")
@@ -55,18 +71,28 @@ export function ContentForm({
           throw error;
         }
 
+        console.log("Subjects fetched:", data);
         setSubjects(data || []);
+        
+        // If no subject is selected and we have subjects, select the first one
+        if (data && data.length > 0 && !selectedSubjectId) {
+          setSelectedSubjectId(data[0].id);
+          setSubject(data[0].name);
+        }
       } catch (error: any) {
+        console.error("Error fetching subjects:", error);
         toast({
           variant: "destructive",
           title: "Error",
           description: error.message || "Failed to fetch subjects",
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchSubjects();
-  }, [toast]);
+  }, [toast, selectedSubjectId, setSelectedSubjectId, setSubject]);
 
   // Update subject text when subject ID changes
   useEffect(() => {
@@ -110,21 +136,29 @@ export function ContentForm({
 
         <div className="space-y-2">
           <Label htmlFor="subject-select">Subject</Label>
-          <Select
-            value={selectedSubjectId}
-            onValueChange={setSelectedSubjectId}
-          >
-            <SelectTrigger id="subject-select">
-              <SelectValue placeholder="Select a subject" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {subjects.map((subject) => (
-                <SelectItem key={subject.id} value={subject.id}>
-                  {subject.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isLoading ? (
+            <div className="h-10 bg-gray-100 animate-pulse rounded-md"></div>
+          ) : subjects.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              No subjects available. Please create subjects in the admin dashboard.
+            </div>
+          ) : (
+            <Select
+              value={selectedSubjectId}
+              onValueChange={setSelectedSubjectId}
+            >
+              <SelectTrigger id="subject-select">
+                <SelectValue placeholder="Select a subject" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {subjects.map((subject) => (
+                  <SelectItem key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -140,7 +174,7 @@ export function ContentForm({
         </div>
       </CardContent>
       <CardFooter>
-        <Button disabled={isGenerating} onClick={onGenerate} className="w-full">
+        <Button disabled={isGenerating || subjects.length === 0} onClick={onGenerate} className="w-full">
           {isGenerating ? "Generating..." : "Generate Content"}
         </Button>
       </CardFooter>
